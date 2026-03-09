@@ -12,6 +12,7 @@ class OrderStatus(PyEnum):
     cancelled = "cancelled"
 
 
+
 class TransactionType(PyEnum):
     deposit = "deposit"
     withdraw = "withdraw"
