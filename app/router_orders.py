@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, Query
-from schemas.schemas import OrderCreate, OrderRead, OrderUpdate, ProductsRead, ClientOrder, OrderResponse
+from schemas.schemas import OrderCreate, ResponseOrder, OrderUpdate, ProductsRead, ClientOrder, OrderResponse
 from services.order_service import OrderService
 
 
@@ -10,7 +10,7 @@ app = FastAPI()
 router_order = APIRouter(prefix="/order")
 
 
-@router_order.post("/create_orders", response_model=OrderRead)
+@router_order.post("/create_orders", response_model=ResponseOrder)
 async def create_orders(order: OrderCreate):
         return await OrderService.create_order(
             data=order
@@ -25,14 +25,14 @@ async def get_orders(skip: int = Query(0, ge=1), limit: int = Query(0, ge=1, le=
         )
 
 
-@router_order.get("/orders/{order_id}", response_model=OrderRead)
+@router_order.get("/orders/{order_id}", response_model=ResponseOrder)
 async def read_order(order_id: int):
         return await OrderService.get_order(
             order_id
         )
 
     
-@router_order.post("{order_id}/products/{products_id}", response_model=OrderRead)
+@router_order.post("{order_id}/products/{products_id}", response_model=ResponseOrder)
 async def add_product_to_order(order_id: int, products_id: int):
         return await OrderService.add_product_to_order(
             order_id,

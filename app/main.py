@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from database.database import async_engine, Base
-from clients import router_client
-from orders import router_order
-from products import router_product
-from transaction import router_transaction
+from router_client import router_client
+from router_orders import router_order
+from router_products import router_product
+from router_transaction import router_transaction
 
 app = FastAPI()
 

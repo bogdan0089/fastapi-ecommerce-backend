@@ -1,7 +1,4 @@
-from fastapi import FastAPI, Depends, APIRouter
-from database.database  import get_session
-from sqlalchemy.ext.asyncio import AsyncSession
-from models.models import Order
+from fastapi import FastAPI, APIRouter
 from schemas.schemas import ProductsCreate, ProductsRead
 from services.product_service import ProductService
 

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter
-from schemas.schemas import ClientCreate, ClientRead, OperationsRequest, ClientUpdate, ClientOrderdsCount
+from schemas.schemas import ClientCreate, ResponseClient, OperationsRequest, ClientUpdate, ClientOrderdsCount
 from services.client_service import ClientService
 
 
@@ -26,7 +26,7 @@ async def client_withdraw(client_id: int, withdraw: OperationsRequest):
         )
 
 
-@router_client.post("/create_client", response_model=ClientRead)
+@router_client.post("/create_client", response_model=ResponseClient)
 async def create_client(client: ClientCreate):
     return await ClientService.create_client(data=client)
 
@@ -36,7 +36,7 @@ async def get_clients():
     return await ClientService.get_all_client()
 
 
-@router_client.get("/{client_id}", response_model=ClientRead)
+@router_client.get("/{client_id}", response_model=ResponseClient)
 async def client_by_id(client_id: int):
         return await ClientService.get_client(client_id)
     

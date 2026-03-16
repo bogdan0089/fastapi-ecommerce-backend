@@ -12,12 +12,14 @@ class CreateTransaction(BaseModel):
 class ResponseTransaction(CreateTransaction):
     id: int
 
+
 class ClientCreate(BaseModel):
     name: str
     age: int
 
-class ClientRead(ClientCreate):
+class ResponseClient(ClientCreate):
     id: int
+
 
 class ClientOrderdsCount(BaseModel):
     client_id: int
@@ -41,13 +43,13 @@ class OrderResponse(BaseModel):
     client_id: int
     title: str
 
-    
     class Config:
         from_attributes = True
 
 
-class OrderRead(OrderCreate):
+class ResponseOrder(OrderCreate):
     id: int
+
 
 class OrderUpdate(OrderCreate):
     id: int
@@ -59,7 +61,6 @@ class ProductsCreate(BaseModel):
 
 class ProductsRead(ProductsCreate):
     id: int
-
 
 
 class OperationsRequest(BaseModel):
