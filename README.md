@@ -13,3 +13,17 @@ Supports clients, products, orders, and transactions, demonstrating CRUD operati
 - Docker & Docker Compose
 
 ## Project Structure
+
+## How to Run Locally
+Follow these steps to run the project on your machine:
+
+1. **Clone the repository:**  
+```bash
+git clone https://github.com/bogdan0089/Backend-System.git
+
+cd "Project Online Shop"
+
+python -m venv .venv
+pip install -r requirements.txt
+
+docker-compose up --build
