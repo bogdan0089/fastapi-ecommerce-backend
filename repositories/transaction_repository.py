@@ -1,7 +1,7 @@
 from models.models import Transaction
 from schemas.schemas import CreateTransaction
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select
 
 
 
@@ -11,7 +11,7 @@ class TransactionRepository:
         self.session = session
 
     
-    async def create_transaction(self, data: CreateTransaction):
+    async def create_transaction(self, data: CreateTransaction) -> Transaction:
         transaction = Transaction(
             amount=data.amount,
             type=data.type,

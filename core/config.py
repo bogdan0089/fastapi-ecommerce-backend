@@ -3,6 +3,13 @@ import os
 
 load_dotenv()
 
+class Settings:
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    ALGHORITM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60
+    
+settings = Settings()
+
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST", "db")

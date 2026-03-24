@@ -16,7 +16,6 @@ class ProductRepository:
         self.session.add(db_products)
         return db_products
 
-
     async def get_product(self, product_id: int) -> Product:
         return await self.session.get(Product, product_id)
     

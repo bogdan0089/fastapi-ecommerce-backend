@@ -12,14 +12,19 @@ class CreateTransaction(BaseModel):
 class ResponseTransaction(CreateTransaction):
     id: int
 
-
 class ClientCreate(BaseModel):
+    password: str
+    email: str
     name: str
     age: int
+    balance: float
 
-class ResponseClient(ClientCreate):
+class ResponseClient(BaseModel):
+    email: str
+    name: str
+    age: int
+    balance: float
     id: int
-
 
 class ClientOrderdsCount(BaseModel):
     client_id: int
@@ -46,26 +51,28 @@ class OrderResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 class ResponseOrder(OrderCreate):
     id: int
-
 
 class OrderUpdate(OrderCreate):
     id: int
     
-
 class ProductsCreate(BaseModel):
     name: str
-
 
 class ProductsRead(ProductsCreate):
     id: int
 
-
 class OperationsRequest(BaseModel):
     amount: float
 
-
 class UpdateOrderStatus(BaseModel):
     status: OrderStatus
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    client_id: int
+    email: str
+    age: int
+    name: str

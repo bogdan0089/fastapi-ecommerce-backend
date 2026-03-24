@@ -1,11 +1,7 @@
-from fastapi import FastAPI, APIRouter, Query
+from fastapi import APIRouter, Depends
 from schemas.schemas import OrderCreate, ResponseOrder, OrderUpdate, ProductsRead, ClientOrder, OrderResponse
 from services.order_service import OrderService
-
-
-
-app = FastAPI()
-
+from utils.dependencies import get_current_client
 
 router_order = APIRouter(prefix="/order")
 
@@ -16,85 +12,59 @@ async def create_orders(order: OrderCreate):
             data=order
         )
 
-
 @router_order.get("/get_orders")
-async def get_orders(skip: int = Query(0, ge=1), limit: int = Query(0, ge=1, le=100)):
-        return await OrderService.get_orders(
-            skip,
-            limit
-        )
-
+async def get_orders(limit: int = 10, offset: int = 0):
+        return await OrderService.get_orders(limit, offset)
 
 @router_order.get("/orders/{order_id}", response_model=ResponseOrder)
-async def read_order(order_id: int):
+async def read_order(order_id: int, current_client=Depends(get_current_client)):
         return await OrderService.get_order(
-            order_id
+            order_id,
+            current_client
         )
 
-    
-@router_order.post("{order_id}/products/{products_id}", response_model=ResponseOrder)
-async def add_product_to_order(order_id: int, products_id: int):
+@router_order.post("/{order_id}/products/{products_id}", response_model=ResponseOrder)
+async def add_product_to_order(order_id: int, products_id: int, current_client=Depends(get_current_client)):
         return await OrderService.add_product_to_order(
             order_id,
-            products_id
+            products_id,
+            current_client
         )
 
-
 @router_order.put("/order_update/{order_id}", response_model=OrderUpdate)
-async def order_update(order_id: int, title: str):
+async def order_update(order_id: int, title: str, current_client=Depends(get_current_client)):
     return await OrderService.order_update(
         order_id,
+        current_client,
         title=title
     ) 
 
-
-@router_order.get("/orders/{order_id}/products")
-async def order_with_products(order_id: int, products: ProductsRead):
-    order = await OrderService.get_orders(
-        order_id,
-        products
-    )
-    return {
-        "order_id": order.id
-        }
-
-
 @router_order.get("/order/{order_id}/total_price")
-async def order_client_sum(order_id: int):
+async def order_client_sum(order_id: int, current_client=Depends(get_current_client)):
     return await OrderService.order_client_sum(
-        order_id
+        order_id,
+        current_client
     )
-
 
 @router_order.put("/client/{client_id}/order")
-async def update_order_status(order_id: int, status: str):
+async def update_order_status(order_id: int, status: str, current_client=Depends(get_current_client)):
      return await OrderService.update_order_status(
         order_id,
-        status
+        status,
+        current_client
     )
      
-
 @router_order.post("/orders", response_model=OrderResponse)
-async def create_order_for_client(data: ClientOrder):
+async def create_order_for_client(data: ClientOrder, current_client=Depends(get_current_client)):
     order =  await OrderService.create_order_client(
+        current_client=current_client,
         client_id=data.client_id,
         product_id=data.product_id,
         title=data.title
     )
     return order
 
-
-
-
-
-
-@router_order.delete("/orders/{order_id}/product/{product_id}")
-async def delete_product_from_order(order_id: int, product_id: int):
-    order = await OrderService.delete_product_from_order(order_id, product_id)
-    return order
-
-
-@router_order.get("order_with_products/{order_id}")
-async def order_with_products(order_id: int):
-      order_with_products = await OrderService.get_order_with_products(order_id)
+@router_order.get("/order_with_products/{order_id}")
+async def order_with_products(order_id: int, current_client=Depends(get_current_client)):
+      order_with_products = await OrderService.get_order_with_products(order_id, current_client)
       return order_with_products

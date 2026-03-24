@@ -5,7 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from core.enum import SAEnum, TransactionType, OrderStatus
 
 
-
 class Transaction(Base):
     __tablename__ = "transaction"
 
@@ -17,8 +16,6 @@ class Transaction(Base):
     client_fk: Mapped[int] = mapped_column(ForeignKey("clients.id", name="fk_transaction_client"))
 
 
-
-
 class Client(Base):
     __tablename__ = "clients"
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
@@ -28,9 +25,10 @@ class Client(Base):
     products: Mapped[List["Product"]] = relationship(secondary="client_products", back_populates="clients")
     balance: Mapped[float] = mapped_column(default=0.0)
     transactions: Mapped[List["Transaction"]] = relationship(back_populates="client")
+    email: Mapped[str] = mapped_column(nullable=False)
+    hashed_password: Mapped[str] = mapped_column(nullable=False)
     
     
-
 class Order(Base):
     __tablename__ = "orders"
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
@@ -44,7 +42,6 @@ class Order(Base):
     )
 
 
-
 class Product(Base):
     __tablename__ = "products"
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
@@ -54,14 +51,12 @@ class Product(Base):
     price: Mapped[float] = mapped_column(default=0.0, nullable=True)
 
 
-
 client_products = Table(
     "client_products",
     Base.metadata,
     Column("client_id", ForeignKey("clients.id"), primary_key=True),
     Column("product_id", ForeignKey("products.id"), primary_key=True)
 )
-
 
 
 order_products = Table(
