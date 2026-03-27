@@ -98,7 +98,6 @@ Client:
 | POST | /client/{id}/withdraw | 🔒 | Withdraw balance |
 | GET | /client/{id}/orders/count | 🔒 | Count client orders |
 
-
 Product: 
 | Method | URL | Auth | Description |
 |--------|-----|------|-------------|
