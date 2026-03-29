@@ -1,5 +1,5 @@
 from schemas.schemas import ClientCreate, ClientUpdate, OrderCreate
-from models.models  import Client
+from models.models import Client
 from typing import List
 from database.unit_of_work import UnitOfWork
 from core.exceptions import (

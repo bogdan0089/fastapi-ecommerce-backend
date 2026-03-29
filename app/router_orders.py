@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
-from schemas.schemas import OrderCreate, ResponseOrder, OrderUpdate, ProductsRead, ClientOrder, OrderResponse
+from schemas.schemas import OrderCreate, ResponseOrder, OrderUpdate, ClientOrder, OrderResponse
 from services.order_service import OrderService
 from utils.dependencies import get_current_client
+
 
 router_order = APIRouter(prefix="/order")
 

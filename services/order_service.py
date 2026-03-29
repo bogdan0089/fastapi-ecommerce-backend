@@ -78,22 +78,8 @@ class OrderService:
             order.products.append(product)
             return order.products
 
-    @staticmethod
-    async def compeleted_order(order_id: int, current_client: Client) -> Order:
-        async with UnitOfWork() as uow:
-            order = await uow.order.get_order(order_id)
-            if order is None:
-                raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(
-                    required_role="Owner or admin",
-                    client_role="client"
-                )
-            if order.status == OrderStatus.completed:
-                raise OrderAlready()
-            order.status = OrderStatus.completed
-            return order
-            
+
+
     @staticmethod
     async def order_client_sum(order_id: int, current_client: Client) -> dict:
         async with UnitOfWork() as uow:

@@ -5,7 +5,6 @@ from repositories.product_repository import ProductRepository
 from repositories.transaction_repository import TransactionRepository
 
 
-
 class UnitOfWork:
     def __init__(self):
         self.session = None
@@ -28,7 +27,7 @@ class UnitOfWork:
         await self.session.close()
         
     async def commit(self):
-        await self.commit()
+        await self.session.commit()
 
     async def rollback(self):
-        await self.rollback()
+        await self.session.rollback()

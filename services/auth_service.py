@@ -17,12 +17,12 @@ class AuthService:
             "sub": str(user_id),
             "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         }
-        return jwt.encode(payload, settings.SECRET_KEY, settings.ALGHORITM)
+        return jwt.encode(payload, settings.SECRET_KEY, settings.ALGORITHM)
     
     @staticmethod
     def decode_token(token: str):
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGHORITM])
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             user_id = payload.get("sub")
             if user_id is None:
                 raise ClientNotFoundError()
@@ -38,7 +38,7 @@ class AuthService:
             "sub": str(client_id),
             "exp": datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         }
-        return jwt.encode(payload, settings.SECRET_KEY, settings.ALGHORITM)
+        return jwt.encode(payload, settings.SECRET_KEY, settings.ALGORITHM)
     
 
     @staticmethod

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from models.models import OrderStatus
+from core.enum import OrderStatus
 
 
 class CreateTransaction(BaseModel):
@@ -83,9 +83,8 @@ class TokenResponse(BaseModel):
     name: str
 
 class TransactionArchive(BaseModel):
-    descriprion: str
+    description: str
     type: str
-
 
 class RefreshResponse(BaseModel):
     access_token: str
