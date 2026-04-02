@@ -18,6 +18,7 @@ class Transaction(Base):
 
 class Client(Base):
     __tablename__ = "clients"
+
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
     name: Mapped[str] = mapped_column(String(50))
     age: Mapped[int]
@@ -31,6 +32,7 @@ class Client(Base):
     
 class Order(Base):
     __tablename__ = "orders"
+
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
     title: Mapped[str]
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"))
@@ -44,6 +46,7 @@ class Order(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
     name: Mapped[str]
     orders: Mapped[List["Order"]] = relationship(secondary="order_products", back_populates="products", lazy="selectin")

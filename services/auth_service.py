@@ -1,15 +1,25 @@
 from datetime import datetime, timedelta, timezone
 from core.config import settings
 import jwt
-from schemas.schemas import ClientCreate, TokenResponse
+from models.models import Client
+from utils.hash import verify_password, hash_password
+from schemas.schemas import ClientCreate, TokenResponse, ChangePassword
 from database.unit_of_work import UnitOfWork
 from utils.hash import hash_password, verify_password
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import Depends
-from core.exceptions import ClientNotFoundError, TokenExpiredError, TokenInvalidError, VerifyPasswordError, ClientAlreadyError
+from core.exceptions import (
+ClientNotFoundError,
+TokenExpiredError,
+TokenInvalidError,
+VerifyPasswordError,
+ClientAlreadyError,
+ClientUpdateError
+)
 
 
 class AuthService:
+
 
     @staticmethod
     def create_access_token(user_id: int):
@@ -39,7 +49,6 @@ class AuthService:
             "exp": datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         }
         return jwt.encode(payload, settings.SECRET_KEY, settings.ALGORITHM)
-    
 
     @staticmethod
     def refresh_token(token: str):
@@ -83,7 +92,19 @@ class AuthService:
                 name=client.name
             )
             
-        
+    @staticmethod
+    async def change_password(data: ChangePassword, current_client: Client) -> dict:
+        if not verify_password(data.old_password, current_client.hashed_password):
+            raise ClientUpdateError("Failed old password")
+        new_hashed = hash_password(data.new_password)
+        async with UnitOfWork() as uow:
+            client = await uow.client.get_client(current_client.id)
+            if not client:
+                raise ClientNotFoundError(current_client.id)
+            client.hashed_password = new_hashed
+            return {
+                "message": "Changed password"
+            }
                 
 
 

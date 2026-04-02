@@ -11,8 +11,8 @@ async def create_product(data: ProductsCreate):
     return await ProductService.create_product(data)
 
 @router_product.get("/all")
-async def get_all_products():
-    return await ProductService.get_products()
+async def get_all_products(limit: int = 10, offset: int = 0):
+    return await ProductService.get_products(limit, offset)
 
 @router_product.get("/search")
 async def search_products(name: str):

@@ -2,6 +2,8 @@ from schemas.schemas import OrderCreate, CreateTransaction
 from models.models import Order, Client
 from database.unit_of_work import UnitOfWork
 from core.enum import OrderStatus, TransactionType
+from core.redis import redis_client
+import json
 from core.exceptions import(
 OrderNotFoundError,
 ClientNotFoundError, 
@@ -25,11 +27,23 @@ class OrderService:
             return create_order
 
     @staticmethod
-    async def get_orders(limit: int = 10, offset: int = 0) -> Order:
+    async def get_orders(limit: int = 10, offset: int = 0) -> list[Order]:
         async with UnitOfWork() as uow:
+            cached_key = f"orders:limit={limit}:offset={offset}"
+            cached = await redis_client.get(cached_key)
+            if cached:
+                return json.loads(cached)
             order = await uow.order.get_orders(limit=limit, offset=offset)
             if not order:
                 raise OrdersNotFound()
+            await redis_client.set(
+                cached_key, json.dumps([{
+                    "id": o.id,
+                    "title": o.title,
+                    "client_id": o.client_id,
+                    "status": o.status.value 
+                } for o in order if isinstance(o, Order)]), ex=60
+            )
             return order
 
     @staticmethod
@@ -77,8 +91,6 @@ class OrderService:
                 raise ProductAlready()
             order.products.append(product)
             return order.products
-
-
 
     @staticmethod
     async def order_client_sum(order_id: int, current_client: Client) -> dict:

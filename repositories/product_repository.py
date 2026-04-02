@@ -4,6 +4,7 @@ from schemas.schemas import ProductsCreate, ProductUpdate
 from sqlalchemy import select
 from typing import List
 
+
 class ProductRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -20,8 +21,10 @@ class ProductRepository:
         result = await self.session.get(Product, product_id)
         return result
     
-    async def get_products(self) -> List[Product] | None:
-        result = await self.session.execute(select(Product))
+    async def get_products(self, limit, offset) -> List[Product] | None:
+        result = await self.session.execute(
+            select(Product).limit(limit).offset(offset)
+        )
         return result.scalars().all()
     
     async def update_product(self, product: Product, data: ProductUpdate) -> Product | None:

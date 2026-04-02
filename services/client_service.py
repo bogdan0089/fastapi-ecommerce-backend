@@ -2,13 +2,11 @@ from schemas.schemas import ClientCreate, ClientUpdate, OrderCreate
 from models.models import Client
 from typing import List
 from database.unit_of_work import UnitOfWork
+from core.redis import redis_client
+import json
 from core.exceptions import (
-    ClientAlreadyError,
-    ClientDeleteError,
-    ClientTransactionNotFound,
     ClientNotFoundError,
     ClientsNotFoundError,
-    ClientUpdateError,
     InsufficientPermissionsError,
     InvalidAmountError,
     NotEnoughMoneyError
@@ -22,7 +20,6 @@ class ClientService:
     @staticmethod
     async def create_client(data: ClientCreate) -> Client:
         async with UnitOfWork() as uow:
-
             hashed = hash_password(data.password)
             client = await uow.client.create_client(
                 name=data.name,
@@ -36,14 +33,28 @@ class ClientService:
                 client_id=client.id
             )
             await uow.order.create_order(order_data)
+            await redis_client.delete("client:all")
             return client
     
     @staticmethod
-    async def get_all_client() -> List[Client]:
+    async def get_all_client(limit: int = 10, offset: int = 0) -> List[Client]:
         async with UnitOfWork() as uow:
-            client = await uow.client.get_all_clients()
+            cached_key = f"clients:limit={limit}:offset={offset}"
+            cached = await redis_client.get(cached_key)
+            if cached:
+                return json.loads(cached)
+            client = await uow.client.get_all_clients(limit, offset)
             if not client:
                 raise ClientsNotFoundError()
+            await redis_client.set(
+                cached_key, json.dumps([{
+                    "email": c.email,
+                    "name": c.name,
+                    "age": c.age,
+                    "balance": c.balance,
+                    "id": c.id
+                } for c in client if isinstance(c, Client)]), ex=60
+            )
             return client
 
     @staticmethod
@@ -71,6 +82,7 @@ class ClientService:
                     client_role="client"
                 )
             client_update = await uow.client.client_update(client, data)
+            await redis_client.delete("client:all")
             return client_update
 
     @staticmethod
@@ -92,6 +104,7 @@ class ClientService:
                 )
             if not orders:
                 await uow.client.client_delete(client)
+                await redis_client.delete("client:all")
                 return client
 
     @staticmethod
@@ -114,6 +127,9 @@ class ClientService:
     @staticmethod
     async def get_client_stats(current_client: Client) -> dict:
         async with UnitOfWork() as uow:
+            cached = await redis_client.get(f"client:stats:{current_client.id}")
+            if cached:
+                return json.loads(cached)
             client = await uow.client.client_with_orders(current_client.id)
             if not client:
                 raise ClientNotFoundError(current_client.id)
@@ -123,6 +139,12 @@ class ClientService:
                 for order in client.orders
                 if order.status.value == "completed"
             )
+            await redis_client.set(f"client:stats:{current_client.id}", json.dumps({
+                "total_orders": total_orders,
+                "total_spent": total_spent,
+                "client_id": client.id,
+                "balance": client.balance
+            }), ex=60)
             return {
                 "client_id": client.id,
                 "total_orders": total_orders,
@@ -165,7 +187,6 @@ class ClientService:
             return client_withdraw
         
 
-        
 
 
 

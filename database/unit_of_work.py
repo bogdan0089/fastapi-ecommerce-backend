@@ -4,7 +4,6 @@ from repositories.order_repository import OrderRepository
 from repositories.product_repository import ProductRepository
 from repositories.transaction_repository import TransactionRepository
 
-
 class UnitOfWork:
     def __init__(self):
         self.session = None

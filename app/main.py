@@ -9,7 +9,7 @@ from app.router_auth import router_auth
 
 app = FastAPI()
 
-# Підключаємо роутери
+
 app.include_router(router_product)
 app.include_router(router_client)
 app.include_router(router_order)

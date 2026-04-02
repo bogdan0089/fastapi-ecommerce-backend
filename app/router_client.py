@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends
-from schemas.schemas import ClientCreate, ResponseClient, OperationsRequest, ClientUpdate, ClientOrderdsCount
+from schemas.schemas import (
+ClientCreate,
+ResponseClient,
+OperationsRequest,
+ClientOrderdsCount,
+)
 from services.client_service import ClientService
 from utils.dependencies import get_current_client
 
@@ -19,7 +24,6 @@ async def get_my_stats(current_client=Depends(get_current_client)):
 async def get_my_orders(current_client=Depends(get_current_client)):
     from services.order_service import OrderService
     return await OrderService.get_my_orders(current_client)
-
 
 @router_client.post("/{client_id}/deposit")
 async def client_deposit(client_id: int, deposit: OperationsRequest, current_client=Depends(get_current_client)):
@@ -46,8 +50,8 @@ async def create_client(client: ClientCreate):
     return result
 
 @router_client.get("/all_clients", response_model=list[ResponseClient])
-async def get_clients():
-    result = await ClientService.get_all_client()
+async def get_clients(limit: int = 10, offset: int = 0):
+    result = await ClientService.get_all_client(limit, offset)
     return result
 
 @router_client.get("/{client_id}", response_model=ResponseClient,)

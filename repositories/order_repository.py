@@ -6,7 +6,6 @@ from sqlalchemy.orm import selectinload
 from typing import List
 
 
-
 class OrderRepository:
     def __init__(self, session: AsyncSession):
         self.session = session

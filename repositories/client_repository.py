@@ -23,15 +23,16 @@ class ClientRepository:
         await self.session.flush()
         return db_client
 
-    async def get_all_clients(self) -> List[Client]:
-        client = await self.session.execute(select(Client))
+    async def get_all_clients(self, limit, offset) -> List[Client]:
+        client = await self.session.execute(
+            select(Client).limit(limit).offset(offset)
+        )
         return client.scalars().all()
 
     async def get_client(self, client_id: int) -> Client:
         db_client = await self.session.get(Client, client_id,)
         return db_client
 
-    
     async def client_update(self, client: Client, data: ClientCreate) -> Client: 
         client.name = data.name
         client.age = data.age
