@@ -12,6 +12,7 @@ Supports clients, products, orders, and transactions, demonstrating **CRUD opera
 - Alembic (Database migrations)
 - PostgreSQL
 - Docker & Docker Compose
+- Redis (caching)
 - JWT (PyJWT)
 - bcrypt / passlib
 
@@ -51,7 +52,7 @@ Supports clients, products, orders, and transactions, demonstrating **CRUD opera
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/bogdan0089/Backend-System.git
+git clone https://github.com/bogdan0089/OnlineShop.git
 cd "Project Online Shop"
 ```
 
@@ -123,6 +124,7 @@ Order:
 | POST | /order/{id}/products/{product_id} | 🔒 | Add product to order |
 | DELETE | /order/{id}/order/{product_id}/product | 🔒 | Remove product from order |
 | POST | /order/{id}/checkout | 🔒 | Checkout order |
+| POST | /order/{id}/refund | 🔒 | Cancel order with refund |
 
 Transaction:
 | Method | URL | Auth | Description |
