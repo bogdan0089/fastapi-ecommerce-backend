@@ -1,12 +1,12 @@
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy import pool
 from alembic import context
 import sys
 from pathlib import Path 
 from database.database import Base
-from models.models import Client, Order, Product, Transaction
-from core.config import DATABASE_URL
+from core.config import settings
+
 
 sys.path.append(str(Path(__file__).parent.parent))
 target_metadata = Base.metadata
@@ -17,7 +17,7 @@ if config.config_file_name is not None:
 
 
 def run_migrations_offline() -> None:
-    url = DATABASE_URL 
+    url = settings.DATABASE_URL 
     if "+asyncpg" in url:
         url = url.replace("+asyncpg", "")
     context.configure(
@@ -33,7 +33,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-        url = DATABASE_URL
+        url = settings.DATABASE_URL
         if "+asyncpg" in url:
             url = url.replace("+asyncpg", "")
         connectable = create_engine(url, poolclass=pool.NullPool)

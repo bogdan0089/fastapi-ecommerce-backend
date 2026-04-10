@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from database.database import async_engine, Base
 from app.router_client import router_client
 from app.router_orders import router_order
 from app.router_products import router_product

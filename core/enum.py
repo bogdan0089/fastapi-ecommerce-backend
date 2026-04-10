@@ -1,13 +1,12 @@
-from enum import Enum as PyEnum
-from sqlalchemy import Enum as SAEnum
+from enum import Enum
 
 
-class OrderStatus(PyEnum):
+class OrderStatus(Enum):
     create = "create"
     completed = "completed"
     cancelled = "cancelled"
 
-class TransactionType(PyEnum):
+class TransactionType(Enum):
     deposit = "deposit"
     withdraw = "withdraw"
     refund = "refund"
