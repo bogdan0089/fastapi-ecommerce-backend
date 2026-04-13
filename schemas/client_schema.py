@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from core.enum import Role
 
 
 class ClientCreate(BaseModel):
@@ -7,6 +8,7 @@ class ClientCreate(BaseModel):
     password: str
     age: int
     balance: float = 0.0
+    role: Role = Role.client
 
 
 class ClientUpdate(BaseModel):

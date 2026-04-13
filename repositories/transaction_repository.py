@@ -12,10 +12,7 @@ class TransactionRepository:
 
     async def create_transaction(self, data: CreateTransaction) -> Transaction:
         transaction = Transaction(
-            amount=data.amount,
-            type=data.type,
-            description=data.description,
-            client_fk=data.client_fk,
+            **data.model_dump()
         )
         self.session.add(transaction)
         await self.session.flush()

@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.models import Product
 from schemas.product_schema import ProductCreate, ProductUpdate
+from core.enum import ProductStatus
 
 
 class ProductRepository:
@@ -11,7 +12,9 @@ class ProductRepository:
 
 
     async def create_product(self, data: ProductCreate) -> Product:
-        product = Product(name=data.name, price=data.price)
+        product = Product(
+            **data.model_dump()
+        )
         self.session.add(product)
         await self.session.flush()
         await self.session.refresh(product)
@@ -21,14 +24,23 @@ class ProductRepository:
         return await self.session.get(Product, product_id)
 
     async def get_products(self, limit: int, offset: int) -> Sequence[Product]:
-        result = await self.session.execute(select(Product).limit(limit).offset(offset))
+        result = await self.session.execute(
+            select(Product)
+            .where(Product.status == ProductStatus.accept)
+            .limit(limit).offset(offset)
+        )
         return result.scalars().all()
 
     async def update_product(self, product: Product, data: ProductUpdate) -> Product:
-        if data.name is not None:
-            product.name = data.name
-        if data.price is not None:
-            product.price = data.price
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(product, field, value)
+        self.session.add(product)
+        await self.session.flush()
+        await self.session.refresh(product)
+        return product
+    
+    async def update_product_status(self, product: Product, status: ProductStatus) -> Product:
+        product.status = status
         self.session.add(product)
         await self.session.flush()
         await self.session.refresh(product)

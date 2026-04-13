@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from models.models import Client
-from schemas.client_schema import ClientUpdate
+from schemas.client_schema import ClientUpdate, ClientCreate
+from schemas.auth_schema import ChangeRole
 
 
 class ClientRepository:
@@ -12,14 +13,14 @@ class ClientRepository:
 
 
     async def create_client(
-        self,
-        name: str,
-        age: int,
-        balance: float,
-        hashed_password: str,
-        email: str,
+            self,
+            data: ClientCreate,
+            hashed: str
     ) -> Client:
-        client = Client(name=name, age=age, balance=balance, hashed_password=hashed_password, email=email)
+        client = Client(
+            **data.model_dump(exclude={"password"}),
+            hashed_password=hashed
+        )
         self.session.add(client)
         await self.session.flush()
         await self.session.refresh(client)
@@ -37,8 +38,8 @@ class ClientRepository:
         return result.scalars().first()
 
     async def client_update(self, client: Client, data: ClientUpdate) -> Client:
-        client.name = data.name
-        client.age = data.age
+        for field, value in data.model_dump().items():
+            setattr(client, field, value)
         self.session.add(client)
         await self.session.flush()
         await self.session.refresh(client)
@@ -62,6 +63,14 @@ class ClientRepository:
 
     async def withdraw_client(self, client: Client, amount: float) -> Client:
         client.balance -= amount
+        self.session.add(client)
+        await self.session.flush()
+        await self.session.refresh(client)
+        return client
+    
+    async def change_role(self, client: Client, role: ChangeRole) -> Client:
+        for field, value in role.model_dump().items():
+            setattr(client, field, value)
         self.session.add(client)
         await self.session.flush()
         await self.session.refresh(client)
