@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from schemas.product_schema import ProductCreate, ProductUpdate, ResponseProduct
 from services.product_service import ProductService
-from utils.dependencies import CurrentClient
+from utils.dependencies import CurrentClient, CurrentAdmin, CurrentModerator
+from core.enum import ProductStatus
 
 
 router_product = APIRouter(prefix="/product")
@@ -31,10 +32,14 @@ async def get_product(product_id: int) -> ResponseProduct:
 
 @router_product.put("/{product_id}", response_model=ResponseProduct)
 async def update_product(
-    product_id: int, data: ProductUpdate, _: CurrentClient
+    product_id: int, data: ProductUpdate, _: CurrentAdmin
 ) -> ResponseProduct:
     return await ProductService.update_product(product_id, data)
 
 @router_product.delete("/{product_id}", response_model=ResponseProduct)
-async def delete_product(product_id: int, _: CurrentClient) -> ResponseProduct:
+async def delete_product(product_id: int, _: CurrentAdmin) -> ResponseProduct:
     return await ProductService.delete_product(product_id)
+
+@router_product.patch("/{product_id}/moderate", response_model=ResponseProduct)
+async def update_product_status(product_id: int, status: ProductStatus, _: CurrentModerator) -> ResponseProduct:
+    return await ProductService.update_product_status(product_id, status)

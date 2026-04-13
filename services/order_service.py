@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from core.enum import OrderStatus, TransactionType
+from core.enum import OrderStatus, TransactionType, ProductStatus, Role
 from core.exceptions import (
     ClientNotFoundError,
     InsufficientPermissionsError,
@@ -12,6 +12,7 @@ from core.exceptions import (
     OrdersNotFound,
     ProductAlready,
     ProductNotFound,
+    ProductNotApprovedError
 )
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
@@ -21,7 +22,6 @@ from schemas.transaction_schema import CreateTransaction
 
 
 class OrderService:
-
 
     @staticmethod
     async def create_order(title: str, current_client: Client) -> Order:
@@ -54,8 +54,11 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             return order
 
     @staticmethod
@@ -64,8 +67,11 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderUpdateError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             return await uow.order.orders_update(order, title=title)
 
     @staticmethod
@@ -74,11 +80,16 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             product = await uow.product.get_product(product_id)
             if not product:
                 raise ProductNotFound(product_id)
+            if product.status != ProductStatus.accept:
+                raise ProductNotApprovedError(product.id)
             if product in order.products:
                 raise ProductAlready()
             order.products.append(product)
@@ -90,8 +101,11 @@ class OrderService:
             order = await uow.order.get_order_selectionload(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             total_price = sum(p.price for p in order.products)
             return {"order_id": order.id, "total_price": total_price}
 
@@ -101,8 +115,11 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             return await uow.order.update_order_status(order, status)
 
     @staticmethod
@@ -111,11 +128,14 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             if order.status != OrderStatus.completed:
                 raise OrderNotCompletedError(order_id)
-            client = await uow.client.get_client(current_client.id)
+            client = await uow.client.get_client(order.client_id)
             if not client:
                 raise ClientNotFoundError(current_client.id)
             amount = sum(p.price for p in order.products)
@@ -137,11 +157,16 @@ class OrderService:
             client = await uow.client.get_client(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             product = await uow.product.get_product(product_id)
             if not product:
                 raise ProductNotFound(product_id)
+            if product.status != ProductStatus.accept:
+                raise ProductNotApprovedError(product_id)
             order = await uow.order.create_order(OrderCreate(title=title, client_id=client_id))
             order.products.append(product)
             return order
@@ -152,8 +177,11 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             product = await uow.product.get_product(product_id)
             if not product:
                 raise ProductNotFound(product_id)
@@ -168,8 +196,11 @@ class OrderService:
             order = await uow.order.get_order_selectionload(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             return {"order_with_products": order}
 
     @staticmethod
@@ -178,16 +209,19 @@ class OrderService:
             order = await uow.order.get_order(order_id)
             if not order:
                 raise OrderNotFoundError(order_id)
-            if order.client_id != current_client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if order.client_id != current_client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             if order.status == OrderStatus.completed:
                 raise OrderAlready()
-            client = await uow.client.get_client(current_client.id)
+            client = await uow.client.get_client(order.client_id)
             if not client:
                 raise ClientNotFoundError(current_client.id)
             amount = sum(p.price for p in order.products)
             if client.balance < amount:
-                raise NotEnoughMoneyError(current_client.id)
+                raise NotEnoughMoneyError(order.client_id)
             client.balance -= amount
             await uow.transaction.create_transaction(CreateTransaction(
                 amount=amount,

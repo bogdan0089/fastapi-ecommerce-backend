@@ -8,7 +8,7 @@ from schemas.client_schema import (
 )
 from services.client_service import ClientService
 from services.order_service import OrderService
-from utils.dependencies import CurrentClient
+from utils.dependencies import CurrentClient, CurrentAdmin
 
 
 router_client = APIRouter(prefix="/client")
@@ -42,8 +42,8 @@ async def client_withdraw(
 async def create_client(client: ClientCreate) -> ResponseClient:
     return await ClientService.create_client(data=client)
 
-@router_client.get("/all_clients", response_model=list[ResponseClient])
-async def get_clients(limit: int = 10, offset: int = 0) -> list:
+@router_client.get("/get_clients", response_model=list[ResponseClient])
+async def get_clients(_: CurrentAdmin, limit: int = 10, offset: int = 0) -> list:
     return await ClientService.get_all_client(limit, offset)
 
 @router_client.get("/{client_id}", response_model=ResponseClient)

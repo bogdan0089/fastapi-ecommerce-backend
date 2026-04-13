@@ -10,7 +10,6 @@ from schemas.transaction_schema import CreateTransaction
 
 class TransactionService:
 
-
     @staticmethod
     async def create_transaction(data: CreateTransaction) -> Transaction:
         async with UnitOfWork() as uow:

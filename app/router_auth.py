@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from schemas.auth_schema import ChangePassword, RefreshRequest, RefreshResponse, TokenResponse
+from schemas.auth_schema import ChangePassword, RefreshRequest, RefreshResponse, TokenResponse, ChangeRole
 from schemas.client_schema import ClientCreate, ResponseClient
 from services.auth_service import AuthService
-from utils.dependencies import CurrentClient
+from utils.dependencies import CurrentClient, CurrentAdmin
 
 
 router_auth = APIRouter(prefix="/auth")
@@ -25,3 +25,7 @@ async def refresh_token(data: RefreshRequest) -> RefreshResponse:
 @router_auth.post("/change_password")
 async def change_password(data: ChangePassword, current_client: CurrentClient) -> dict:
     return await AuthService.change_password(data, current_client)
+
+@router_auth.post("/change_role/{client_id}", response_model=ResponseClient)
+async def change_role(client_id: int, data: ChangeRole, _: CurrentAdmin):
+    return await AuthService.change_role(client_id, data)

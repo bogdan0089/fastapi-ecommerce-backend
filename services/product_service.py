@@ -1,13 +1,13 @@
 import json
-from core.exceptions import ProductNotFound, ProductsNotFound
+from core.exceptions import ProductNotFound, ProductsNotFound, ProductNotApprovedError
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Product
 from schemas.product_schema import ProductCreate, ProductUpdate
+from core.enum import ProductStatus
 
 
 class ProductService:
-
 
     @staticmethod
     async def create_product(data: ProductCreate) -> Product:
@@ -50,6 +50,18 @@ class ProductService:
             if not product:
                 raise ProductNotFound(product_id)
             updated = await uow.product.update_product(product, data)
+        keys = await redis_client.keys("products:*")
+        if keys:
+            await redis_client.delete(*keys)
+        return updated
+
+    @staticmethod
+    async def update_product_status(product_id: int, status: ProductStatus) -> Product:
+        async with UnitOfWork() as uow:
+            product = await uow.product.get_product(product_id)
+            if not product:
+                raise ProductNotFound(product_id)
+            updated = await uow.product.update_product_status(product, status)
         keys = await redis_client.keys("products:*")
         if keys:
             await redis_client.delete(*keys)

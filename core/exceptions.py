@@ -35,7 +35,7 @@ class ClientsNotFoundError(BaseAppException):
 
 class ProductsNotFound(BaseAppException):
     def __init__(self) -> None:
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="No products found.")
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Not found products.")
 
 class ClientAlreadyError(BaseAppException):
     def __init__(self, email: str | None = None, client_id: int | None = None) -> None:
@@ -50,6 +50,13 @@ class ClientAlreadyError(BaseAppException):
 class ProductAlready(BaseAppException):
     def __init__(self) -> None:
         super().__init__(status_code=status.HTTP_409_CONFLICT, detail="Product is already in the order.")
+
+class ProductNotApprovedError(BaseAppException):
+    def __init__(self, product_id: int) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Product {product_id} is not approved for sale."
+        )
 
 class OrderAlready(BaseAppException):
     def __init__(self) -> None:
@@ -122,6 +129,7 @@ class TokenInvalidError(BaseAppException):
 class VerifyPasswordError(BaseAppException):
     def __init__(self) -> None:
         super().__init__(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password.")
+        
 class TransactionNotFound(BaseAppException):
     def __init__(self) -> None:
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")

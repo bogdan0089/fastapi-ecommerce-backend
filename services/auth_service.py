@@ -12,13 +12,13 @@ from core.exceptions import (
 )
 from database.unit_of_work import UnitOfWork
 from models.models import Client
-from schemas.auth_schema import ChangePassword, TokenResponse
+from schemas.auth_schema import ChangePassword, TokenResponse, ChangeRole
 from schemas.client_schema import ClientCreate
 from utils.hash import hash_password, verify_password
 
 
-class AuthService:
 
+class AuthService:
 
     @staticmethod
     def create_access_token(user_id: int) -> str:
@@ -62,11 +62,8 @@ class AuthService:
                 raise ClientAlreadyError(email=data.email)
             hashed = hash_password(data.password)
             client = await uow.client.create_client(
-                name=data.name,
-                email=data.email,
-                balance=data.balance,
-                age=data.age,
-                hashed_password=hashed,
+                data,
+                hashed
             )
             return client
 
@@ -101,3 +98,13 @@ class AuthService:
                 raise ClientNotFoundError(current_client.id)
             client.hashed_password = new_hashed
             return {"message": "Password changed successfully."}
+        
+    @staticmethod
+    async def change_role(client_id: int, data: ChangeRole) -> Client:
+        async with UnitOfWork() as uow:
+            client = await uow.client.get_client(client_id)
+            if not client:
+                raise ClientNotFoundError(client_id)
+            changed = await uow.client.change_role(client, data)
+            return changed
+    

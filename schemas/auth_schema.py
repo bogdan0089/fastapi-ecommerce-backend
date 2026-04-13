@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from core.enum import Role
 
 
 class TokenResponse(BaseModel):
@@ -22,3 +23,7 @@ class RefreshRequest(BaseModel):
 class ChangePassword(BaseModel):
     old_password: str
     new_password: str
+
+class ChangeRole(BaseModel):
+    role: Role
+

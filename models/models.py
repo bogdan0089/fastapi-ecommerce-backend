@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Enum as SAEnum, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from core.enum import OrderStatus, TransactionType
+from core.enum import OrderStatus, TransactionType, Role, ProductStatus
 from database.database import Base
 
 
@@ -28,6 +28,9 @@ class Client(Base):
     balance: Mapped[float] = mapped_column(default=0.0)
     orders: Mapped[list["Order"]] = relationship(back_populates="client")
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="client")
+    role: Mapped[Role] = mapped_column(SAEnum(Role, values_callable=lambda x: [e.value for e in x]),
+        default=Role.client,
+    )
     products: Mapped[list["Product"]] = relationship(
         secondary="client_products", back_populates="clients"
     )
@@ -55,6 +58,10 @@ class Product(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     price: Mapped[float] = mapped_column(default=0.0)
+    status: Mapped[ProductStatus] = mapped_column(
+        SAEnum(ProductStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ProductStatus.pending
+    )
     orders: Mapped[list["Order"]] = relationship(
         secondary="order_products", back_populates="products", lazy="selectin"
     )

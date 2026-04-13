@@ -1,6 +1,5 @@
 import json
 from typing import Any
-
 from core.exceptions import (
     ClientDeleteError,
     ClientNotFoundError,
@@ -15,6 +14,7 @@ from models.models import Client
 from schemas.client_schema import ClientCreate, ClientUpdate
 from schemas.order_schema import OrderCreate
 from utils.hash import hash_password
+from core.enum import Role, OrderStatus
 
 
 class ClientService:
@@ -23,13 +23,7 @@ class ClientService:
     async def create_client(data: ClientCreate) -> Client:
         async with UnitOfWork() as uow:
             hashed = hash_password(data.password)
-            client = await uow.client.create_client(
-                name=data.name,
-                age=data.age,
-                balance=data.balance,
-                hashed_password=hashed,
-                email=data.email,
-            )
+            client = await uow.client.create_client(data, hashed)
             order_data = OrderCreate(
                 title=f"Order for client {client.id}",
                 client_id=client.id,
@@ -66,8 +60,11 @@ class ClientService:
             client = await uow.client.get_client(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if current_client.id != client.id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if current_client.id != client.id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             return client
 
     @staticmethod
@@ -76,8 +73,11 @@ class ClientService:
             client = await uow.client.get_client(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if current_client.id != client_id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if current_client.id != client_id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             updated = await uow.client.client_update(client, data)
         keys = await redis_client.keys("clients:*")
         if keys:
@@ -90,8 +90,11 @@ class ClientService:
             client = await uow.client.get_client(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if current_client.id != client_id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if current_client.id != client_id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             orders = await uow.order.get_by_client_id(client_id)
             if orders:
                 raise ClientDeleteError(
@@ -110,8 +113,11 @@ class ClientService:
             client = await uow.client.client_with_orders(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if current_client.id != client_id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if current_client.id != client_id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             return {"client_id": client.id, "orders_count": len(client.orders)}
 
     @staticmethod
@@ -127,7 +133,7 @@ class ClientService:
             total_spent = sum(
                 sum(p.price for p in order.products)
                 for order in client.orders
-                if order.status.value == "completed"
+                if order.status.value == OrderStatus.completed
             )
             stats = {
                 "client_id": client.id,
@@ -144,8 +150,11 @@ class ClientService:
             client = await uow.client.get_client(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if current_client.id != client_id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if current_client.id != client_id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             if amount <= 0:
                 raise InvalidAmountError(amount)
             return await uow.client.deposit_client(client, amount)
@@ -156,8 +165,11 @@ class ClientService:
             client = await uow.client.get_client(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
-            if current_client.id != client_id:
-                raise InsufficientPermissionsError(required_role="owner", client_role="client")
+            if current_client.id != client_id and current_client.role != Role.superadmin:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Admin",
+                    client_role=current_client.role.value
+                )
             if amount <= 0:
                 raise InvalidAmountError(amount)
             if amount > client.balance:
