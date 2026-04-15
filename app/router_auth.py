@@ -29,3 +29,7 @@ async def change_password(data: ChangePassword, current_client: CurrentClient) -
 @router_auth.post("/change_role/{client_id}", response_model=ResponseClient)
 async def change_role(client_id: int, data: ChangeRole, _: CurrentAdmin):
     return await AuthService.change_role(client_id, data)
+
+@router_auth.get("/verify/{token}")
+async def verify_email(token: str):
+    return await AuthService.verify_email(token)

@@ -15,7 +15,9 @@ from models.models import Client
 from schemas.auth_schema import ChangePassword, TokenResponse, ChangeRole
 from schemas.client_schema import ClientCreate
 from utils.hash import hash_password, verify_password
-
+import uuid
+from core.redis import redis_client
+from services.email_service import EmailService
 
 
 class AuthService:
@@ -65,7 +67,10 @@ class AuthService:
                 data,
                 hashed
             )
-            return client
+            token = str(uuid.uuid4())
+        await redis_client.set(f"verify:{token}", client.id, ex=86400)
+        await EmailService.send_verification_email(client.email, token)
+        return client
 
     @staticmethod
     async def client_login(data: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
@@ -107,4 +112,22 @@ class AuthService:
                 raise ClientNotFoundError(client_id)
             changed = await uow.client.change_role(client, data)
             return changed
+        
+    @staticmethod
+    async def verify_email(token: str) -> dict:
+        raw = await redis_client.get((f"verify:{token}"))
+        if not raw:
+            raise TokenInvalidError()
+        client_id = int(raw)
+        async with UnitOfWork() as uow:
+            client = await uow.client.get_client(client_id)
+            if not client:
+                raise ClientNotFoundError(client_id)
+            client.is_verified = True
+        await redis_client.delete(f"verify:{token}")
+        return {
+            "message": "Email verified successfully"
+        }
+            
+            
     
