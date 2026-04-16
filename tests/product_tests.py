@@ -58,14 +58,16 @@ def test_filter_products_by_color(client, auth_headers):
 
 
 def test_search_products(client, auth_headers):
-    client.post("/product/", json={"name": "SearchMe", "price": 10.0, "color": "black"}, headers=auth_headers)
-    response = client.get("/product/search?name=SearchMe")
+    client.post("/product/", json={"name": "Mac", "price": 10.0, "color": "black"}, headers=auth_headers)
+    _db_execute("UPDATE products SET status='accept' WHERE name=%s", ("Mac",))
+    response = client.get("/product/search?name=Mac")
     assert response.status_code == 200
-    assert any(p["name"] == "SearchMe" for p in response.json())
+    assert any(p["name"] == "Mac" for p in response.json())
 
 
 def test_filter_products_by_price(client, auth_headers):
-    client.post("/product/", json={"name": "Cheap", "price": 5.0, "color": "black"}, headers=auth_headers)
+    client.post("/product/", json={"name": "Samsung", "price": 5.0, "color": "black"}, headers=auth_headers)
+    _db_execute("UPDATE products SET status='accept' WHERE name=%s", ("Samsung",))
     response = client.get("/product/filter?min_price=1.0&max_price=10.0")
     assert response.status_code == 200
     for product in response.json():

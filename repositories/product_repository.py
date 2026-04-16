@@ -51,15 +51,17 @@ class ProductRepository:
         return product
 
     async def search_by_name(self, name: str) -> Sequence[Product]:
-        result = await self.session.execute(
-            select(Product).where(Product.name.ilike(f"%{name}%"))
+        stmt = await self.session.execute(
+            select(Product)
+            .where(Product.name.ilike(f"%{name}%"))
+            .where(Product.status == ProductStatus.accept)
         )
-        return result.scalars().all()
+        return stmt.scalars().all()
 
     async def filter_by_price(
         self, min_price: float | None = None, max_price: float | None = None
     ) -> Sequence[Product]:
-        stmt = select(Product)
+        stmt = select(Product).where(Product.status == ProductStatus.accept)
         if min_price is not None:
             stmt = stmt.where(Product.price >= min_price)
         if max_price is not None:
