@@ -21,7 +21,12 @@ class ProductRepository:
         return product
 
     async def get_product(self, product_id: int) -> Product | None:
-        return await self.session.get(Product, product_id)
+        stmt = await self.session.execute(
+            select(Product)
+            .where(Product.id == product_id)
+            .where(Product.status == ProductStatus.accept)
+        )
+        return stmt.scalars().first()
 
     async def get_products(self, limit: int, offset: int) -> Sequence[Product]:
         result = await self.session.execute(

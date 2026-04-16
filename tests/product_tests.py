@@ -30,6 +30,7 @@ def test_get_product(client, auth_headers):
         "price": 79.99,
         "color": "black"
     }, headers=auth_headers)
+    _db_execute("UPDATE products SET status='accept' WHERE name=%s", ("Adidas",))
     product_id = created.json()["id"]
     response = client.get(f"/product/{product_id}")
     assert response.status_code == 200
