@@ -70,7 +70,8 @@ class ProductRepository:
     async def find_by_color(self, product_color: str, limit: int, offset: int) -> Sequence[Product]:
         stmt = await self.session.execute(
             select(Product)
-            .where(Product.color == product_color)
+            .where(Product.color == product_color) 
+            .where(Product.status == ProductStatus.accept)
             .limit(limit).offset(offset)
         )
         return stmt.scalars().all()
