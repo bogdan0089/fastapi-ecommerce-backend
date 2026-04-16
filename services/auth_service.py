@@ -12,7 +12,7 @@ from core.exceptions import (
 )
 from database.unit_of_work import UnitOfWork
 from models.models import Client
-from schemas.auth_schema import ChangePassword, TokenResponse, ChangeRole
+from schemas.auth_schema import ChangePassword, TokenResponse, ChangeRole, ForgotPassword, ResetPassword
 from schemas.client_schema import ClientCreate
 from utils.hash import hash_password, verify_password
 import uuid
@@ -129,5 +129,32 @@ class AuthService:
             "message": "Email verified successfully"
         }
             
-            
-    
+    @staticmethod
+    async def forgot_password(data: ForgotPassword):
+        async with UnitOfWork() as uow:
+            client = await uow.client.get_client_email(data.email)
+            if not client:
+                raise ClientNotFoundError(email=data.email)
+            reset_token = str(uuid.uuid4())
+        await redis_client.set(f"reset_token:{reset_token}", client.id, ex=86400)
+        await EmailService.send_reset_password_email(client.email, reset_token)
+        return {
+            "message": "Password reset email sent"
+        }
+
+    @staticmethod
+    async def reset_password(data: ResetPassword):
+        raw = await redis_client.get(f"reset_token:{data.reset_token}")
+        if not raw:
+            raise TokenInvalidError()
+        client_id = int(raw)
+        async with UnitOfWork() as uow:
+            client = await uow.client.get_client(client_id)
+            if not client:
+                raise ClientNotFoundError(client_id)
+            hashed = hash_password(data.new_password)
+            client.hashed_password = hashed
+        await redis_client.delete(f"reset_token:{data.reset_token}")
+        return {
+            "message": "Password is reset"
+        }

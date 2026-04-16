@@ -11,14 +11,11 @@ class TokenResponse(BaseModel):
     age: int
     name: str
 
-
 class RefreshResponse(BaseModel):
     access_token: str
 
-
 class RefreshRequest(BaseModel):
     refresh_token: str
-
 
 class ChangePassword(BaseModel):
     old_password: str
@@ -27,3 +24,9 @@ class ChangePassword(BaseModel):
 class ChangeRole(BaseModel):
     role: Role
 
+class ResetPassword(BaseModel):
+    reset_token: str
+    new_password: str
+
+class ForgotPassword(BaseModel):
+    email: str
