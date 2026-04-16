@@ -7,8 +7,6 @@ class ClientCreate(BaseModel):
     email: str
     password: str
     age: int
-    balance: float = 0.0
-    role: Role = Role.client
 
 
 class ClientUpdate(BaseModel):
