@@ -9,6 +9,7 @@ from core.exceptions import (
     TokenExpiredError,
     TokenInvalidError,
     VerifyPasswordError,
+    EmailNotVerifiedError
 )
 from database.unit_of_work import UnitOfWork
 from models.models import Client
@@ -80,6 +81,8 @@ class AuthService:
             client = await uow.client.get_client_email(data.username)
             if not client:
                 raise ClientNotFoundError(email=data.username)
+            if not client.is_verified:
+                raise EmailNotVerifiedError(client.id)
             if not verify_password(data.password, client.hashed_password):
                 raise VerifyPasswordError()
             token = AuthService.create_access_token(client.id)
@@ -104,7 +107,7 @@ class AuthService:
             if not client:
                 raise ClientNotFoundError(current_client.id)
             client.hashed_password = new_hashed
-            return {"message": "Password changed successfully."}
+        return {"message": "Password changed successfully."}
         
     @staticmethod
     async def change_role(client_id: int, data: ChangeRole) -> Client:
