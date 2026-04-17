@@ -45,6 +45,27 @@ def test_register_duplicated_email(client, new_client):
     assert response.status_code == 409
     
 
+def test_deposit(client, auth_headers):
+    me = client.get("/client/me", headers=auth_headers)
+    client_id = me.json()["id"]
+    response = client.post(f"/client/{client_id}/deposit", headers=auth_headers, json={
+        "amount": 100
+    })
+    assert response.status_code == 200
+    assert response.json()["balance"] == 100
+
+
+def test_withdraw(client, auth_headers):
+    me = client.get("/client/me", headers=auth_headers)
+    client_id = me.json()["id"]
+    client.post(f"/client/{client_id}/deposit", headers=auth_headers, json={"amount": 100})
+    response = client.post(f"/client/{client_id}/withdraw", headers=auth_headers, json={
+        "amount": 100
+    })
+    assert response.status_code == 200
+    assert response.json()["balance"] == 0
+
+
 def test_client_create_valid():
     client = ClientCreate(name="John", email="john@example.com", password="pass123", age=25, balance=100.0)
     assert client.name == "John"

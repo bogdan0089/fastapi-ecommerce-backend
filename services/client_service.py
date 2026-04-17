@@ -12,9 +12,10 @@ from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Client
 from schemas.client_schema import ClientCreate, ClientUpdate
+from schemas.transaction_schema import CreateTransaction
 from schemas.order_schema import OrderCreate
 from utils.hash import hash_password
-from core.enum import Role, OrderStatus
+from core.enum import Role, OrderStatus, TransactionType
 
 
 class ClientService:
@@ -157,6 +158,12 @@ class ClientService:
                 )
             if amount <= 0:
                 raise InvalidAmountError(amount)
+            await uow.transaction.create_transaction(CreateTransaction(
+                amount=amount,
+                type=TransactionType.deposit,
+                description="deposit",
+                client_fk=client.id
+            ))
             return await uow.client.deposit_client(client, amount)
 
     @staticmethod
@@ -174,4 +181,10 @@ class ClientService:
                 raise InvalidAmountError(amount)
             if amount > client.balance:
                 raise NotEnoughMoneyError(client_id)
+            await uow.transaction.create_transaction(CreateTransaction(
+                amount=amount,
+                type=TransactionType.withdraw,
+                description="withdraw",
+                client_fk=client.id
+            ))
             return await uow.client.withdraw_client(client, amount)
