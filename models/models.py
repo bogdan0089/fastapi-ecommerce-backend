@@ -29,6 +29,7 @@ class Client(Base):
     orders: Mapped[list["Order"]] = relationship(back_populates="client")
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="client")
     is_verified: Mapped[bool] = mapped_column(default=False)
+    is_active: Mapped[bool] = mapped_column(default=True)
     role: Mapped[Role] = mapped_column(SAEnum(Role, values_callable=lambda x: [e.value for e in x]),
         default=Role.client,
     )

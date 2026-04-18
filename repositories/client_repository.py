@@ -27,11 +27,20 @@ class ClientRepository:
         return client
 
     async def get_all_clients(self, limit: int, offset: int) -> Sequence[Client]:
-        result = await self.session.execute(select(Client).limit(limit).offset(offset))
+        result = await self.session.execute(
+            select(Client)
+            .where(Client.is_active == True)
+            .limit(limit).offset(offset)
+        )
         return result.scalars().all()
 
     async def get_client(self, client_id: int) -> Client | None:
-        return await self.session.get(Client, client_id)
+        result = await self.session.execute(
+            select(Client)
+            .where(Client.id == client_id)
+            .where(Client.is_active == True)
+        )
+        return result.scalars().first()
 
     async def get_client_email(self, email: str) -> Client | None:
         result = await self.session.execute(select(Client).where(Client.email == email))
@@ -46,7 +55,8 @@ class ClientRepository:
         return client
 
     async def client_delete(self, client: Client) -> None:
-        await self.session.delete(client)
+        client.is_active = False
+        self.session.add(client)
 
     async def client_with_orders(self, client_id: int) -> Client | None:
         result = await self.session.execute(
