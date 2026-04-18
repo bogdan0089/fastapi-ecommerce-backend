@@ -6,7 +6,7 @@ from core.exceptions import (
     InsufficientPermissionsError,
     NotEnoughMoneyError,
     OrderAlready,
-    OrderNotCompletedError,
+    OrderCannotBeCancelledError,
     OrderNotFoundError,
     OrderUpdateError,
     OrdersNotFound,
@@ -124,7 +124,7 @@ class OrderService:
             return await uow.order.update_order_status(order, status)
 
     @staticmethod
-    async def cancel_order(order_id: int, current_client: Client) -> Order:
+    async def cancel_order(order_id: int, current_client: Client) -> None:
         async with UnitOfWork() as uow:
             order = await uow.order.get_order(order_id)
             if not order:
@@ -134,21 +134,21 @@ class OrderService:
                     required_role="Owner or Admin",
                     client_role=current_client.role.value
                 )
-            if order.status != OrderStatus.completed:
-                raise OrderNotCompletedError(order_id)
             client = await uow.client.get_client(order.client_id)
             if not client:
                 raise ClientNotFoundError(current_client.id)
-            amount = sum(p.price for p in order.products)
-            client.balance += amount
-            await uow.transaction.create_transaction(CreateTransaction(
-                amount=amount,
-                type=TransactionType.refund,
-                description="Order refund",
-                client_fk=client.id,
-            ))
+            if order.status == OrderStatus.cancelled:
+                raise OrderCannotBeCancelledError(order_id)
+            if order.status == OrderStatus.completed:
+                amount = sum(p.price for p in order.products)
+                client.balance += amount
+                await uow.transaction.create_transaction(CreateTransaction(
+                    amount=amount,
+                    type=TransactionType.refund,
+                    description="Order refund",
+                    client_fk=client.id,
+                ))
             order.status = OrderStatus.cancelled
-            return order
 
     @staticmethod
     async def create_order_client(

@@ -23,8 +23,8 @@ async def create_order(order: OrderCreateRequest, current_client: CurrentClient)
 async def get_orders(_: CurrentAdmin, limit: int = 10, offset: int = 0) -> list:
     return await OrderService.get_orders(limit, offset)
 
-@router_order.get("/orders/{order_id}", response_model=ResponseOrder)
-async def read_order(order_id: int, current_client: CurrentClient) -> ResponseOrder:
+@router_order.get("/{order_id}/orders", response_model=ResponseOrder)
+async def get_order(order_id: int, current_client: CurrentClient) -> ResponseOrder:
     return await OrderService.get_order(order_id, current_client)
 
 @router_order.post("/{order_id}/products/{products_id}", response_model=ResponseOrder)
@@ -74,6 +74,7 @@ async def delete_product_from_order_id(
 async def checkout(order_id: int, current_client: CurrentClient) -> ResponseOrder:
     return await OrderService.checkout(order_id, current_client)
 
-@router_order.post("/{order_id}/refund", response_model=ResponseOrder)
-async def canceled_order(order_id: int, current_client: CurrentClient) -> ResponseOrder:
-    return await OrderService.cancel_order(order_id, current_client)
+@router_order.post("/{order_id}/refund", status_code=200)
+async def canceled_order(order_id: int, current_client: CurrentClient) -> dict:
+    await OrderService.cancel_order(order_id, current_client)
+    return {"message": "Order cancelled successfully"}
