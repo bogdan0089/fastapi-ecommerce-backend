@@ -43,9 +43,13 @@ class ClientRepository:
         return result.scalars().first()
 
     async def get_client_email(self, email: str) -> Client | None:
-        result = await self.session.execute(select(Client).where(Client.email == email))
+        result = await self.session.execute(
+            select(Client)
+            .where(Client.email == email)
+            .where(Client.is_active == True)
+        )
         return result.scalars().first()
-
+    
     async def client_update(self, client: Client, data: ClientUpdate) -> Client:
         for field, value in data.model_dump().items():
             setattr(client, field, value)
