@@ -17,14 +17,15 @@ async def get_all_products(limit: int = 10, offset: int = 0) -> list:
     return await ProductService.get_products(limit, offset)
 
 @router_product.get("/search", response_model=list[ResponseProduct])
-async def search_products(name: str) -> list:
-    return await ProductService.search_products(name)
+async def search_products(name: str, limit: int = 25, offset: int = 0) -> list:
+    return await ProductService.search_products(name, limit, offset)
 
 @router_product.get("/filter", response_model=list[ResponseProduct])
 async def filter_products(
-    min_price: float | None = None, max_price: float | None = None
+    min_price: float | None = None, max_price: float | None = None,
+    limit: int = 15, offset: int = 0
 ) -> list:
-    return await ProductService.filter_by_price(min_price, max_price)
+    return await ProductService.filter_by_price(min_price, max_price, limit, offset)
 
 @router_product.get("/{product_id}", response_model=ResponseProduct)
 async def get_product(product_id: int) -> ResponseProduct:

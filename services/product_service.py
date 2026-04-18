@@ -80,19 +80,20 @@ class ProductService:
         return deleted
 
     @staticmethod
-    async def search_products(name: str) -> list[Product]:
+    async def search_products(name: str, limit: int = 20, offset: int = 0) -> list[Product]:
         async with UnitOfWork() as uow:
-            products = await uow.product.search_by_name(name)
+            products = await uow.product.search_by_name(name, limit, offset)
             if not products:
                 raise ProductsNotFound()
             return products
 
     @staticmethod
     async def filter_by_price(
-        min_price: float | None = None, max_price: float | None = None
+        min_price: float | None = None, max_price: float | None = None,
+        limit: int = 15, offset: int = 0
     ) -> list[Product]:
         async with UnitOfWork() as uow:
-            products = await uow.product.filter_by_price(min_price, max_price)
+            products = await uow.product.filter_by_price(min_price, max_price, limit, offset)
             if not products:
                 raise ProductsNotFound()
             return products
