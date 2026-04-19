@@ -11,11 +11,6 @@ from schemas.transaction_schema import CreateTransaction
 class TransactionService:
 
     @staticmethod
-    async def create_transaction(data: CreateTransaction) -> Transaction:
-        async with UnitOfWork() as uow:
-            return await uow.transaction.create_transaction(data)
-
-    @staticmethod
     async def get_transaction(transaction_id: int, current_client: Client) -> Transaction:
         async with UnitOfWork() as uow:
             transaction = await uow.transaction.get_transaction(transaction_id)
