@@ -16,7 +16,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     
-
   redis:
     image: redis:7
     restart: always
@@ -34,6 +33,17 @@ services:
       - db
     ports:
       - "8000:8000"
+
+  celery_worker:
+    build: .
+    container_name: celery_worker
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    command: celery -A celery_app worker --loglevel=info
 
 volumes:
   pgdata:
