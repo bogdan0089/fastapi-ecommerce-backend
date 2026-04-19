@@ -45,7 +45,7 @@ class ClientRepository:
     async def get_client_email(self, email: str) -> Client | None:
         result = await self.session.execute(
             select(Client)
-            .where(Client.email == email)
+            .where(Client.email == email.lower())
             .where(Client.is_active == True)
         )
         return result.scalars().first()

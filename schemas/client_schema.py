@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from core.enum import Role
 
 
@@ -7,6 +7,11 @@ class ClientCreate(BaseModel):
     email: EmailStr
     password: str
     age: int
+
+    @field_validator("email")
+    @classmethod
+    def lowercase_email(cls, v: str) -> str:
+        return v.lower()
 
 
 class ClientUpdate(BaseModel):
