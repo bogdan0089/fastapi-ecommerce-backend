@@ -8,7 +8,6 @@ class CreateTransaction(BaseModel):
     description: str
     client_fk: int
 
-
 class ResponseTransaction(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -18,7 +17,9 @@ class ResponseTransaction(BaseModel):
     description: str
     client_fk: int
 
-
 class TransactionArchive(BaseModel):
     description: str
     type: TransactionType
+
+class RequestPayment(BaseModel):
+    amount: float
