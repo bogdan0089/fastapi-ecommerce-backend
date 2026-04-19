@@ -25,6 +25,6 @@ async def get_transaction(
 
 @router_transaction.get("/{client_id}/transactions", response_model=list[ResponseTransaction])
 async def client_all_transactions(
-    client_id: int, current_client: CurrentClient
+    client_id: int, current_client: CurrentClient, limit: int = 10, offset: int = 0
 ) -> list:
-    return await TransactionService.client_all_transactions(client_id, current_client)
+    return await TransactionService.client_all_transactions(client_id, current_client, limit, offset)

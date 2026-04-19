@@ -35,9 +35,3 @@ class TransactionRepository:
             .offset(offset)
         )
         return result.scalars().all()
-
-    async def get_all_client_transactions(self, client_id: int) -> Sequence[Transaction]:
-        result = await self.session.execute(
-            select(Transaction).where(Transaction.client_fk == client_id)
-        )
-        return result.scalars().all()

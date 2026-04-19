@@ -26,14 +26,14 @@ class TransactionService:
             return transaction
 
     @staticmethod
-    async def client_all_transactions(client_id: int, current_client: Client) -> list[Transaction]:
+    async def client_all_transactions(client_id: int, current_client: Client, limit: int = 10, offset: int = 0) -> list[Transaction]:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client(client_id)
             if client is None:
                 raise ClientNotFoundError(client_id)
             if client.id != current_client.id:
                 raise InsufficientPermissionsError(required_role="owner", client_role="client")
-            return await uow.transaction.get_all_client_transactions(client_id)
+            return await uow.transaction.get_client_transactions(client_id, limit, offset)
 
     @staticmethod
     async def get_my_transactions(
