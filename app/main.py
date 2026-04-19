@@ -6,6 +6,7 @@ from app.router_products import router_product
 from app.router_transaction import router_transaction
 from app.router_auth import router_auth
 from app.router_websocket import router_websocket
+from app.router_payment import router_payment
 
 
 app = FastAPI()
@@ -18,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+app.include_router(router_payment)
 app.include_router(router_websocket)
 app.include_router(router_product)
 app.include_router(router_client)
