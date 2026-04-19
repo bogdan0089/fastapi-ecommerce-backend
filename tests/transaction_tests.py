@@ -7,27 +7,7 @@ from schemas.transaction_schema import CreateTransaction
 def test_get_my_transaction(client, auth_headers):
     response = client.get("/transaction/me/transactions", headers=auth_headers)
     assert response.status_code in (200, 404)
-
-
-def test_create_transaction(client, auth_headers):
-    response = client.post("/transaction/create_transaction", headers=auth_headers, json={
-        "amount": 100,
-        "type": "deposit",
-        "description": "create",
-        "client_fk": 1
-    })
-    assert response.status_code == 200
-
-
-def test_create_transaction_unauthorized(client):
-    response = client.post("/transaction/create_transaction", json={
-        "amount": 100,
-        "type": "deposit",
-        "description": "create",
-        "client_fk": 1
-    })
-    assert response.status_code == 401
-
+    
 
 def test_create_transaction_valid():
     tr= CreateTransaction(

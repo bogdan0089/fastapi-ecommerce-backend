@@ -1,15 +1,11 @@
 from fastapi import APIRouter
-from schemas.transaction_schema import CreateTransaction, ResponseTransaction
+from schemas.transaction_schema import ResponseTransaction
 from services.transaction_service import TransactionService
 from utils.dependencies import CurrentClient
 
 
 router_transaction = APIRouter(prefix="/transaction")
 
-
-@router_transaction.post("/create_transaction", response_model=ResponseTransaction)
-async def create_transaction(transaction: CreateTransaction, _: CurrentClient) -> ResponseTransaction:
-    return await TransactionService.create_transaction(data=transaction)
 
 @router_transaction.get("/me/transactions", response_model=list[ResponseTransaction])
 async def get_my_transactions(
