@@ -34,8 +34,12 @@ class OrderRepository:
         result = await self.session.execute(select(Order).limit(limit).offset(offset))
         return result.scalars().all()
 
-    async def get_by_client_id(self, client_id: int) -> Sequence[Order]:
-        result = await self.session.execute(select(Order).where(Order.client_id == client_id))
+    async def get_by_client_id(self, client_id: int, limit, offset) -> Sequence[Order]:
+        result = await self.session.execute(
+            select(Order)
+            .where(Order.client_id == client_id)
+            .limit(limit).offset(offset)
+        )
         return result.scalars().all()
 
     async def orders_update(self, order: Order, data: OrderUpdateRequest) -> Order:

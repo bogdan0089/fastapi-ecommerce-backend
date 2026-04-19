@@ -37,7 +37,7 @@ class TransactionService:
 
     @staticmethod
     async def get_my_transactions(
-        current_client: Client, limit: int = 10, offset: int = 0
+        current_client: Client, limit, offset
     ) -> list[Transaction]:
         async with UnitOfWork() as uow:
             return await uow.transaction.get_client_transactions(current_client.id, limit, offset)

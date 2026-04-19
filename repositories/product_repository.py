@@ -65,8 +65,7 @@ class ProductRepository:
         return stmt.scalars().all()
 
     async def filter_by_price(
-        self, min_price: float | None = None, max_price: float | None = None,
-        limit: int = 15, offset: int = 0
+        self, limit, offset, min_price: float | None = None, max_price: float | None = None 
     ) -> Sequence[Product]:
         stmt = select(Product).where(Product.status == ProductStatus.accept)
         if min_price is not None:

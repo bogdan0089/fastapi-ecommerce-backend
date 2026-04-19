@@ -23,7 +23,7 @@ def test_get_order(client, auth_headers):
         "title": "Order To Get"
     }, headers=auth_headers)
     order_id = created.json()["id"]
-    response = client.get(f"/order/orders/{order_id}", headers=auth_headers)
+    response = client.get(f"/order/{order_id}/orders", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["id"] == order_id
 

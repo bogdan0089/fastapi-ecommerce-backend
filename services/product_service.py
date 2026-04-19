@@ -27,13 +27,13 @@ class ProductService:
             return product
 
     @staticmethod
-    async def get_products(limit: int = 10, offset: int = 0) -> list[Product] | list[dict]:
+    async def get_products(limit, offset) -> list[Product] | list[dict]:
         async with UnitOfWork() as uow:
             cached_key = f"products:limit={limit}:offset={offset}"
             cached = await redis_client.get(cached_key)
             if cached:
                 return json.loads(cached)
-            products = await uow.product.get_products(limit=limit, offset=offset)
+            products = await uow.product.get_products(limit, offset)
             if not products:
                 raise ProductsNotFound()
             await redis_client.set(
@@ -80,7 +80,7 @@ class ProductService:
         return deleted
 
     @staticmethod
-    async def search_products(name: str, limit: int = 20, offset: int = 0) -> list[Product]:
+    async def search_products(name: str, limit, offset) -> list[Product]:
         async with UnitOfWork() as uow:
             products = await uow.product.search_by_name(name, limit, offset)
             if not products:
@@ -89,8 +89,7 @@ class ProductService:
 
     @staticmethod
     async def filter_by_price(
-        min_price: float | None = None, max_price: float | None = None,
-        limit: int = 15, offset: int = 0
+        limit, offset, min_price: float | None = None, max_price: float | None = None
     ) -> list[Product]:
         async with UnitOfWork() as uow:
             products = await uow.product.filter_by_price(min_price, max_price, limit, offset)
@@ -99,7 +98,7 @@ class ProductService:
             return products
         
     @staticmethod
-    async def find_by_color(product_color: str, limit: int = 10, offset: int = 0) -> list[Product]:
+    async def find_by_color(product_color: str, limit, offset) -> list[Product]:
         async with UnitOfWork() as uow:
             products = await uow.product.find_by_color(product_color, limit, offset)
             if not products:

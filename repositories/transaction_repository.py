@@ -26,7 +26,7 @@ class TransactionRepository:
         return result.scalars().first()
 
     async def get_client_transactions(
-        self, client_id: int, limit: int = 10, offset: int = 0
+        self, client_id: int, limit, offset
     ) -> Sequence[Transaction]:
         result = await self.session.execute(
             select(Transaction)
