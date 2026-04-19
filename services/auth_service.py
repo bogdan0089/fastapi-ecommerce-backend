@@ -18,7 +18,7 @@ from schemas.client_schema import ClientCreate
 from utils.hash import hash_password, verify_password
 import uuid
 from core.redis import redis_client
-from services.email_service import EmailService
+from celery_app import send_verification_email, send_reset_password_email
 
 
 class AuthService:
@@ -70,7 +70,7 @@ class AuthService:
             )
             token = str(uuid.uuid4())
         await redis_client.set(f"verify:{token}", client.id, ex=86400)
-        await EmailService.send_verification_email(client.email, token)
+        send_verification_email.delay(client.email, token)
         return {
             "message": "Registration successful. Check your email to verify account."
         }
@@ -142,7 +142,7 @@ class AuthService:
                 raise ClientNotFoundError(email=data.email)
             reset_token = str(uuid.uuid4())
         await redis_client.set(f"reset_token:{reset_token}", client.id, ex=86400)
-        await EmailService.send_reset_password_email(client.email, reset_token)
+        send_reset_password_email.delay(client.email, reset_token)
         return {
             "message": "Password reset email sent"
         }
