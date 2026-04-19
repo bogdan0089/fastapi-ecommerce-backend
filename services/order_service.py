@@ -19,6 +19,7 @@ from database.unit_of_work import UnitOfWork
 from models.models import Client, Order
 from schemas.order_schema import OrderCreate
 from schemas.transaction_schema import CreateTransaction
+from utils.connection_manager import connection
 
 
 class OrderService:
@@ -231,6 +232,7 @@ class OrderService:
                 client_fk=client.id,
             ))
             order.status = OrderStatus.completed
+            await connection.broadcast(f"New order {order_id} checked out by client {current_client.id}")
             return order
 
     @staticmethod
