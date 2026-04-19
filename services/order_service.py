@@ -29,7 +29,7 @@ class OrderService:
             return await uow.order.create_order(OrderCreate(title=title, client_id=current_client.id))
 
     @staticmethod
-    async def get_orders(limit: int = 10, offset: int = 0) -> list[Order] | list[dict]:
+    async def get_orders(limit, offset) -> list[Order] | list[dict]:
         async with UnitOfWork() as uow:
             cached_key = f"orders:limit={limit}:offset={offset}"
             cached = await redis_client.get(cached_key)
@@ -234,9 +234,9 @@ class OrderService:
             return order
 
     @staticmethod
-    async def get_my_orders(current_client: Client, limit: int = 10, offset: int = 0) -> list[Order]:
+    async def get_my_orders(current_client: Client, limit, offset) -> list[Order]:
         async with UnitOfWork() as uow:
-            orders = await uow.order.get_by_client_id(current_client.id)
+            orders = await uow.order.get_by_client_id(current_client.id, limit, offset)
             if not orders:
                 raise OrdersNotFound()
-            return orders[offset:offset + limit]
+            return orders
