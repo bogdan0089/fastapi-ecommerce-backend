@@ -82,8 +82,8 @@ Supports clients, products, orders, and transactions, demonstrating **CRUD opera
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/bogdan0089/OnlineShop.git
-cd "Project Online Shop"
+git clone https://github.com/bogdan0089/fastapi-ecommerce-backend.git
+cd fastapi-ecommerce-backend
 ```
 
 2. **Configure environment**
