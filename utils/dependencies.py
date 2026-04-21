@@ -1,11 +1,16 @@
 from typing import Annotated
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
-from core.exceptions import ClientNotFoundError, InsufficientPermissionsError
+from core.exceptions import (
+ClientNotFoundError,
+InsufficientPermissionsError,
+TooManyRequests
+)
 from database.unit_of_work import UnitOfWork
 from models.models import Client
 from services.auth_service import AuthService
 from core.enum import Role
+from core.redis import redis_client
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/client_login")
@@ -44,3 +49,17 @@ async def get_current_moderator(client: Client = Depends(get_current_client)) ->
         )
     
 CurrentModerator = Annotated[Client, Depends(get_current_moderator)]
+
+
+async def rate_limit(request: Request):
+    ip = request.client.host
+    limit = f"rate_limit:{ip}"
+    if int(await redis_client.get(limit) or 0) > 5:
+        raise TooManyRequests()
+    else:
+        await redis_client.incr(limit)
+        await redis_client.expire(limit, 60)
+
+
+
+RateLimit = Annotated[None, Depends(rate_limit)]

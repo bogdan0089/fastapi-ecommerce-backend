@@ -168,3 +168,10 @@ class InvalidOrderTransitionError(BaseAppException):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot transition order from {from_status} to {to_status}"
         )
+
+class TooManyRequests(BaseAppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many requests. Try again later."
+        )

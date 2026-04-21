@@ -11,18 +11,18 @@ ForgotPassword
 )
 from schemas.client_schema import ClientCreate, ResponseClient
 from services.auth_service import AuthService
-from utils.dependencies import CurrentClient, CurrentAdmin
+from utils.dependencies import CurrentClient, CurrentAdmin, RateLimit
 
 
 router_auth = APIRouter(prefix="/auth")
 
 
 @router_auth.post("/register")
-async def register_client(data: ClientCreate):
+async def register_client(data: ClientCreate, _: RateLimit):
     return await AuthService.register_client(data)
 
 @router_auth.post("/client_login", response_model=TokenResponse)
-async def client_login(data: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
+async def client_login(_: RateLimit, data: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
     return await AuthService.client_login(data)
 
 @router_auth.post("/refresh", response_model=RefreshResponse)
