@@ -12,7 +12,8 @@ from core.exceptions import (
     OrdersNotFound,
     ProductAlready,
     ProductNotFound,
-    ProductNotApprovedError
+    ProductNotApprovedError,
+    InvalidOrderTransitionError
 )
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
@@ -122,6 +123,13 @@ class OrderService:
                     required_role="Owner or Admin",
                     client_role=current_client.role.value
                 )
+            allowed_transitions = {
+                OrderStatus.create: [OrderStatus.completed, OrderStatus.cancelled],
+                OrderStatus.completed: [OrderStatus.cancelled],
+                OrderStatus.cancelled: []
+            }
+            if status not in allowed_transitions[order.status]:
+                raise InvalidOrderTransitionError(order.status, status)
             return await uow.order.update_order_status(order, status)
 
     @staticmethod
