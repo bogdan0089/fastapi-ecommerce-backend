@@ -41,6 +41,15 @@ class ClientRepository:
             .where(Client.is_active == True)
         )
         return result.scalars().first()
+    
+    async def get_client_with_lock(self, client_id: int) -> Client | None:
+        result = await self.session.execute(
+            select(Client)
+            .where(Client.id == client_id)
+            .where(Client.is_active == True)
+            .with_for_update()
+        )
+        return result.scalars().first()
 
     async def get_client_email(self, email: str) -> Client | None:
         result = await self.session.execute(

@@ -69,7 +69,7 @@ class AuthService:
                 hashed
             )
             token = str(uuid.uuid4())
-        await redis_client.set(f"verify:{token}", client.id, ex=86400)
+            await redis_client.set(f"verify:{token}", client.id, ex=86400)
         send_verification_email.delay(client.email, token)
         return {
             "message": "Registration successful. Check your email to verify account."

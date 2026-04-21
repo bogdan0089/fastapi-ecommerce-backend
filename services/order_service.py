@@ -135,7 +135,7 @@ class OrderService:
                     required_role="Owner or Admin",
                     client_role=current_client.role.value
                 )
-            client = await uow.client.get_client(order.client_id)
+            client = await uow.client.get_client_with_lock(order.client_id)
             if not client:
                 raise ClientNotFoundError(current_client.id)
             if order.status == OrderStatus.cancelled:
@@ -218,7 +218,7 @@ class OrderService:
                 )
             if order.status == OrderStatus.completed:
                 raise OrderAlready()
-            client = await uow.client.get_client(order.client_id)
+            client = await uow.client.get_client_with_lock(order.client_id)
             if not client:
                 raise ClientNotFoundError(current_client.id)
             amount = sum(p.price for p in order.products)

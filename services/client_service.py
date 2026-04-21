@@ -133,7 +133,7 @@ class ClientService:
     @staticmethod
     async def client_deposit(client_id: int, amount: float, current_client: Client) -> Client:
         async with UnitOfWork() as uow:
-            client = await uow.client.get_client(client_id)
+            client = await uow.client.get_client_with_lock(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
             if current_client.id != client_id and current_client.role != Role.superadmin:
@@ -154,7 +154,7 @@ class ClientService:
     @staticmethod
     async def client_withdraw(client_id: int, amount: float, current_client: Client) -> Client:
         async with UnitOfWork() as uow:
-            client = await uow.client.get_client(client_id)
+            client = await uow.client.get_client_with_lock(client_id)
             if not client:
                 raise ClientNotFoundError(client_id)
             if current_client.id != client_id and current_client.role != Role.superadmin:
