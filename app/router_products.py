@@ -47,3 +47,7 @@ async def update_product_status(product_id: int, data: UpdateProductStatus, _: C
 @router_product.get("/color/{product_color}", response_model=list[ResponseProduct])
 async def find_by_color(product_color: str, limit: int = 10, offset: int = 0) -> list[ResponseProduct]:
     return await ProductService.find_by_color(product_color, limit, offset)
+
+@router_product.get("/admin/all", response_model=list[ResponseProduct])
+async def get_products_admin(_: CurrentAdmin, limit: int = 100, offset: int = 0):
+    return await ProductService.get_products_any_status(limit, offset)
