@@ -42,6 +42,13 @@ class ProductRepository:
             .limit(limit).offset(offset)
         )
         return result.scalars().all()
+    
+    async def get_products_any_status(self, limit: int, offset: int) -> list[Product] | None:
+        result = await self.session.execute(
+            select(Product)
+            .limit(limit).offset(offset)
+        )
+        return result.scalars().all()
 
     async def update_product(self, product: Product, data: ProductUpdate) -> Product:
         for field, value in data.model_dump(exclude_unset=True).items():

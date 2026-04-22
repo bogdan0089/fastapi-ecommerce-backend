@@ -27,6 +27,7 @@ class ResponseClient(BaseModel):
     name: str
     age: int
     balance: float
+    role: Role
 
 
 class ClientOrdersCount(BaseModel):

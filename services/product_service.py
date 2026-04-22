@@ -1,5 +1,5 @@
 import json
-from core.exceptions import ProductNotFound, ProductsNotFound
+from core.exceptions import ProductNotFound
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Product
@@ -35,11 +35,28 @@ class ProductService:
                 return json.loads(cached)
             products = await uow.product.get_products(limit, offset)
             if not products:
-                raise ProductsNotFound()
+                return []
             await redis_client.set(
                 cached_key,
-                json.dumps([{"id": p.id, "name": p.name, "price": p.price} for p in products]),
+                json.dumps([{"id": p.id, "name": p.name, "price": p.price, "color": p.color, "status": p.status.value} for p in products]),
                 ex=60,
+            )
+            return products
+
+    @staticmethod
+    async def get_products_any_status(limit: int, offset: int) -> list[Product] | None:
+        async with UnitOfWork() as uow:
+            cached_key = f"products_admin:limit={limit}:offset={offset}"
+            cached = await redis_client.get(cached_key)
+            if cached:
+                return json.loads(cached)
+            products = await uow.product.get_products_any_status(limit, offset)
+            if not products:
+                return []
+            await redis_client.set(
+                cached_key,
+                json.dumps([{"id": p.id, "name": p.name, "price": p.price, "color": p.color, "status": p.status.value} for p in products]),
+                ex=60
             )
             return products
 
@@ -83,9 +100,7 @@ class ProductService:
     async def search_products(name: str, limit, offset) -> list[Product]:
         async with UnitOfWork() as uow:
             products = await uow.product.search_by_name(name, limit, offset)
-            if not products:
-                raise ProductsNotFound()
-            return products
+            return products or []
 
     @staticmethod
     async def filter_by_price(
@@ -93,15 +108,11 @@ class ProductService:
     ) -> list[Product]:
         async with UnitOfWork() as uow:
             products = await uow.product.filter_by_price(min_price, max_price, limit, offset)
-            if not products:
-                raise ProductsNotFound()
-            return products
+            return products or []
         
     @staticmethod
     async def find_by_color(product_color: str, limit, offset) -> list[Product]:
         async with UnitOfWork() as uow:
             products = await uow.product.find_by_color(product_color, limit, offset)
-            if not products:
-                raise ProductsNotFound()
-            return products
+            return products or []
 
