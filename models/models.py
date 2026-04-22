@@ -65,6 +65,7 @@ class Product(Base):
         SAEnum(ProductStatus, values_callable=lambda x: [e.value for e in x]),
         default=ProductStatus.pending
     )
+    image_url: Mapped[str | None] = mapped_column(nullable=True)
     orders: Mapped[list["Order"]] = relationship(
         secondary="order_products", back_populates="products", lazy="selectin"
     )

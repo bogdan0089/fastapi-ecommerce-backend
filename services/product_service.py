@@ -38,7 +38,14 @@ class ProductService:
                 return []
             await redis_client.set(
                 cached_key,
-                json.dumps([{"id": p.id, "name": p.name, "price": p.price, "color": p.color, "status": p.status.value} for p in products]),
+                json.dumps([{
+                    "id": p.id,
+                    "name": p.name,
+                    "price": p.price,
+                    "color": p.color,
+                    "status": p.status.value,
+                    "image_url": p.image_url
+                } for p in products]),
                 ex=60,
             )
             return products
@@ -55,7 +62,14 @@ class ProductService:
                 return []
             await redis_client.set(
                 cached_key,
-                json.dumps([{"id": p.id, "name": p.name, "price": p.price, "color": p.color, "status": p.status.value} for p in products]),
+                json.dumps([{
+                    "id": p.id,
+                    "name": p.name,
+                    "price": p.price,
+                    "color": p.color,
+                    "status": p.status.value,
+                    "image_url": p.image_url
+                } for p in products]),
                 ex=60
             )
             return products
@@ -87,7 +101,7 @@ class ProductService:
     @staticmethod
     async def delete_product(product_id: int) -> Product:
         async with UnitOfWork() as uow:
-            product = await uow.product.get_product(product_id)
+            product = await uow.product.get_product_any_status(product_id)
             if not product:
                 raise ProductNotFound(product_id)
             deleted = await uow.product.delete_product(product)
