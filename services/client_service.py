@@ -110,9 +110,9 @@ class ClientService:
                 raise ClientNotFoundError(current_client.id)
             total_orders = len(client.orders)
             total_spent = sum(
-                sum(p.price for p in order.products)
+                sum(op.product.price * op.quantity for op in order.order_products)
                 for order in client.orders
-                if order.status.value == OrderStatus.completed
+                if order.status == OrderStatus.completed
             )
             stats = {
                 "client_id": client.id,
