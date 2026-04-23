@@ -12,7 +12,7 @@ celery = Celery(
 
 @celery.task
 def send_verification_email(to_email: str, token: str):
-    message = MIMEText(f"Click to verify your email:\nhttp://localhost:8000/auth/verify/{token}")
+    message = MIMEText(f"Click to verify your email:\n{settings.BASE_URL}/auth/verify/{token}")
     message["Subject"] = "Verification email"
     message["From"] = settings.EMAIL_USER
     message["To"] = to_email
@@ -24,7 +24,7 @@ def send_verification_email(to_email: str, token: str):
 
 @celery.task
 def send_reset_password_email(to_email: str, token: str):
-    message = MIMEText(f"Click to reset your password:\nhttp://localhost:8000/auth/reset_password/{token}")
+    message = MIMEText(f"Click to reset your password:\n{settings.BASE_URL}/auth/reset_password/{token}")
     message["Subject"] = "Password reset"
     message["From"] = settings.EMAIL_USER
     message["To"] = to_email
