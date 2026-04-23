@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str
     STRIPE_WEBHOOK_SECRET: str
 
+    DEBUG: bool = False
+    BASE_URL: str = "http://localhost:8000"
+
 
     @computed_field
     @property
