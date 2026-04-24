@@ -13,7 +13,7 @@ class ProductService:
     async def create_product(data: ProductCreate) -> Product:
         async with UnitOfWork() as uow:
             product = await uow.product.create_product(data)
-        keys = await redis_client.keys("products:*")
+        keys = await redis_client.keys("product*")
         if keys:
             await redis_client.delete(*keys)
         return product
@@ -81,7 +81,7 @@ class ProductService:
             if not product:
                 raise ProductNotFound(product_id)
             updated = await uow.product.update_product(product, data)
-        keys = await redis_client.keys("products:*")
+        keys = await redis_client.keys("product*")
         if keys:
             await redis_client.delete(*keys)
         return updated
@@ -93,7 +93,7 @@ class ProductService:
             if not product:
                 raise ProductNotFound(product_id)
             updated = await uow.product.update_product_status(product, status)
-        keys = await redis_client.keys("products:*")
+        keys = await redis_client.keys("product*")
         if keys:
             await redis_client.delete(*keys)
         return updated
