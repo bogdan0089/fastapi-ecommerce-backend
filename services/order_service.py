@@ -13,7 +13,8 @@ from core.exceptions import (
     ProductAlready,
     ProductNotFound,
     ProductNotApprovedError,
-    InvalidOrderTransitionError
+    InvalidOrderTransitionError,
+    OutOfStockError
 )
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
@@ -230,9 +231,14 @@ class OrderService:
             if not client:
                 raise ClientNotFoundError(current_client.id)
             amount = sum(op.product.price * op.quantity for op in order.order_products)
+            for op in order.order_products:
+                if op.product.quantity < op.quantity:
+                    raise OutOfStockError(op.product_id)
             if client.balance < amount:
                 raise NotEnoughMoneyError(order.client_id)
             client.balance -= amount
+            for op in order.order_products:
+                op.product.quantity -= op.quantity
             await uow.transaction.create_transaction(CreateTransaction(
                 amount=amount,
                 type=TransactionType.purchase,

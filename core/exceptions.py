@@ -175,3 +175,11 @@ class TooManyRequests(BaseAppException):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many requests. Try again later."
         )
+
+class OutOfStockError(BaseAppException):
+    def __init__(self, product_id: int):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Product {product_id} is out of stock"
+        )
+        

@@ -8,11 +8,13 @@ class ProductCreate(BaseModel):
     price: float = 0.0
     color: str
     image_url: str | None = None
+    quantity: int = 0
 
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     price: Optional[float] = None
+
 
 class UpdateProductStatus(BaseModel):
     status: ProductStatus
@@ -27,3 +29,4 @@ class ResponseProduct(BaseModel):
     color: str
     status: ProductStatus
     image_url: str | None = None
+    quantity: int = 0
