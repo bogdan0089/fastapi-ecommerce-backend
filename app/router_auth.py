@@ -43,7 +43,7 @@ async def verify_email(token: str):
     return await AuthService.verify_email(token)
 
 @router_auth.post("/forgot_password")
-async def forgot_password(data: ForgotPassword):
+async def forgot_password(data: ForgotPassword, _: RateLimit):
     return await AuthService.forgot_password(data)
 
 @router_auth.post("/reset_password")
