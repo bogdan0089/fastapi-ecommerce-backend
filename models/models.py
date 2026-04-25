@@ -66,6 +66,7 @@ class Product(Base):
         default=ProductStatus.pending
     )
     image_url: Mapped[str | None] = mapped_column(nullable=True)
+    quantity: Mapped[int] = mapped_column(default=0)
     order_products: Mapped[list["OrderProduct"]] = relationship(
         back_populates="product"
     )
