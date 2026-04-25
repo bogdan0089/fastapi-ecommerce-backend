@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from core.enum import Role
+from typing import Optional
 
 
 class ClientCreate(BaseModel):
@@ -24,6 +25,7 @@ class ClientCreate(BaseModel):
 class ClientUpdate(BaseModel):
     name: str
     age: int
+    address: Optional[str] = None
 
 
 class ResponseClient(BaseModel):
@@ -35,7 +37,7 @@ class ResponseClient(BaseModel):
     age: int
     balance: float
     role: Role
-
+    address: Optional[str] = None 
 
 class ClientOrdersCount(BaseModel):
     client_id: int
