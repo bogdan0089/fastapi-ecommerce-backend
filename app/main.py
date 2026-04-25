@@ -7,9 +7,10 @@ from app.router_transaction import router_transaction
 from app.router_auth import router_auth
 from app.router_websocket import router_websocket
 from app.router_payment import router_payment
+from app.router_category import router_category
 
 
-app = FastAPI()
+app = FastAPI(title="Online Shop")
 
 
 app.add_middleware(
@@ -30,3 +31,4 @@ app.include_router(router_client)
 app.include_router(router_order)
 app.include_router(router_transaction)
 app.include_router(router_auth)
+app.include_router(router_category)

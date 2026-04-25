@@ -67,6 +67,8 @@ class Product(Base):
     )
     image_url: Mapped[str | None] = mapped_column(nullable=True)
     quantity: Mapped[int] = mapped_column(default=0)
+    category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id"), nullable=True)
+    category: Mapped["Category | None"] = relationship(back_populates="products")
     order_products: Mapped[list["OrderProduct"]] = relationship(
         back_populates="product"
     )
@@ -82,6 +84,15 @@ class OrderProduct(Base):
     quantity: Mapped[int] = mapped_column(default=1)
     order: Mapped["Order"] = relationship(back_populates="order_products")
     product: Mapped["Product"] = relationship(back_populates="order_products", lazy="selectin")
+
+
+
+class Category(Base):
+    __tablename__ = "categories"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True)
+    products: Mapped[list["Product"]] = relationship(back_populates="category")
+
 
 
 client_products = Table(
