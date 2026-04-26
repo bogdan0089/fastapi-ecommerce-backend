@@ -27,7 +27,7 @@ Features JWT auth, role-based access control, Stripe payments, real-time WebSock
 ├── app/              # Routers (FastAPI endpoints)
 ├── services/         # Business logic (all @staticmethod)
 ├── repositories/     # Raw SQLAlchemy queries
-├── models/           # ORM models: Client, Order, Product, Transaction
+├── models/           # ORM models: Client, Order, Product, Transaction, Category, OrderProduct; association table: client_products
 ├── schemas/          # Pydantic v2 schemas
 ├── core/             # Config, custom exceptions, enums
 ├── database/         # Async session, Unit of Work
@@ -44,7 +44,7 @@ Features JWT auth, role-based access control, Stripe payments, real-time WebSock
 ## Key Concepts Demonstrated
 
 - **Architecture:** Router → Service → Unit of Work → Repository → DB, strict layer separation with no cross-layer dependencies
-- **Data Modeling:** 4 ORM models (Client, Order, Product, Transaction), One-to-Many and Many-to-Many via association tables
+- **Data Modeling:** 6 ORM models (Client, Order, Product, Transaction, Category, OrderProduct); One-to-Many (Client → Orders, Client → Transactions, Category → Products) and Many-to-Many (Order ↔ Products via OrderProduct with quantity, Client ↔ Products via client_products)
 - **Auth & Security:** JWT access + refresh token flow, bcrypt, email verification via UUID token in Redis (24h TTL), forgot/reset password via email
 - **RBAC:** 3 roles (client / moderator / superadmin) with role-based endpoint protection
 - **Product Moderation:** `pending → accept / rejected` workflow, moderated by moderator or superadmin
