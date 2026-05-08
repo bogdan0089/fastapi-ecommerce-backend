@@ -31,6 +31,9 @@ class FakeRedis:
     async def delete(self, *keys): pass
     async def incr(self, key): return 1
     async def expire(self, key, seconds): pass
+    async def scan_iter(self, pattern):
+        return
+        yield
 
 
 @pytest.fixture(scope="session", autouse=True)
