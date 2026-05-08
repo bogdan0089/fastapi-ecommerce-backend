@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -18,5 +18,5 @@ jobs:
           script: |
             cd /home/ubuntu/fastapi-ecommerce-backend
             git pull origin main
-            docker-compose up --build -d
+            docker compose up --build -d
 
