@@ -70,7 +70,7 @@ def new_client(client):
     payload = {
         "name": "Bohdan",
         "email": f"user_{uuid.uuid4().hex[:8]}@gmail.com",
-        "password": "pass123",
+        "password": "pass1234",
         "age": 25,
     }
     client.post("/auth/register", json=payload)

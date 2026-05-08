@@ -76,14 +76,14 @@ def test_withdraw(client, auth_headers):
 
 
 def test_client_create_valid():
-    client = ClientCreate(name="John", email="john@example.com", password="pass123", age=25, balance=100.0)
+    client = ClientCreate(name="John", email="john@example.com", password="pass1234", age=25, balance=100.0)
     assert client.name == "John"
     assert client.email == "john@example.com"
 
 
 def test_client_create_missing_name():
     with pytest.raises(ValidationError):
-        ClientCreate(email="john@example.com", password="pass", age=25)
+        ClientCreate(email="john@example.com", password="pass1234", age=25)
 
 
 def test_client_update_valid():
