@@ -18,14 +18,14 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://redis:6379"
 
-    EMAIL_USER: str
-    EMAIL_PASSWORD: str
+    EMAIL_USER: str = ""
+    EMAIL_PASSWORD: str = ""
 
-    STRIPE_SECRET_KEY: str
-    STRIPE_PUBLISHABLE_KEY: str
-    STRIPE_WEBHOOK_SECRET: str
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
 
-    GROQ_API_KEY: str
+    GROQ_API_KEY: str = ""
 
     DEBUG: bool = False
     BASE_URL: str = "http://localhost:8000"
