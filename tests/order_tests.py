@@ -81,7 +81,7 @@ def test_checkout(client, auth_headers):
     me = client.get("/client/me", headers=auth_headers)
     client_id = me.json()["id"]
     client.post(f"/client/{client_id}/deposit", headers=auth_headers, json={"amount": 1000})
-    product = client.post("/product/", json={"name": "samsung", "price": 50.0, "color": "black"}, headers=auth_headers)
+    product = client.post("/product/", json={"name": "samsung", "price": 50.0, "color": "black", "quantity": 10}, headers=auth_headers)
     _db_execute("UPDATE products SET status='accept' WHERE name=%s", ("samsung",))
     product_id = product.json()["id"]
     order = client.post("/order/create_orders", json={"title": "samsung"}, headers=auth_headers)
@@ -96,7 +96,7 @@ def test_refund_completed_order(client, auth_headers):
     me = client.get("/client/me", headers=auth_headers)
     client_id = me.json()["id"]
     client.post(f"/client/{client_id}/deposit", headers=auth_headers, json={"amount": 1000})
-    product = client.post("/product/", json={"name": "macbook", "price": 50.0, "color": "white"}, headers=auth_headers)
+    product = client.post("/product/", json={"name": "macbook", "price": 50.0, "color": "white", "quantity": 10}, headers=auth_headers)
     _db_execute("UPDATE products SET status='accept' WHERE name=%s", ("macbook",))
     product_id = product.json()["id"]
     order = client.post("/order/create_orders", json={"title": "Refund Order"}, headers=auth_headers)
