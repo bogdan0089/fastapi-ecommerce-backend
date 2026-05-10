@@ -137,7 +137,7 @@ class OrderService:
             if status not in allowed_transitions[order.status]:
                 raise InvalidOrderTransitionError(order.status, status)
             client = await uow.client.get_client(order.client_id)
-            send_order_status_email.delay(client.email, order_id, status)
+            send_order_status_email.delay(client.email, order_id, status.value)
             updated = await uow.order.update_order_status(order, status)
         async for key in redis_client.scan_iter("order*"):
             await redis_client.unlink(key)
