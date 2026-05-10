@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from core.enum import ProductStatus
+from schemas.category_schema import ResponseCategory
 
 
 class ProductCreate(BaseModel):
@@ -9,6 +10,7 @@ class ProductCreate(BaseModel):
     image_url: str | None = None
     quantity: int = 0
     description: str | None = None
+    category_id: int | None = None
 
 
 class ProductUpdate(BaseModel):
@@ -16,6 +18,7 @@ class ProductUpdate(BaseModel):
     price: float | None = None
     description: str | None = None
     quantity: int | None = None
+    category_id: int | None = None
 
 
 class UpdateProductStatus(BaseModel):
@@ -33,6 +36,7 @@ class ResponseProduct(BaseModel):
     image_url: str | None = None
     quantity: int = 0
     description: str | None = None
+    category: ResponseCategory | None = None
 
 class ProductGenerateDescription(BaseModel):
     product_name: str
