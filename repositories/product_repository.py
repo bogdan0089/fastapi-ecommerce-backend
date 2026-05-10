@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.models import Product
 from schemas.product_schema import ProductCreate, ProductUpdate
 from core.enum import ProductStatus
+from sqlalchemy.orm import selectinload
 
 
 class ProductRepository:
@@ -17,13 +18,18 @@ class ProductRepository:
         )
         self.session.add(product)
         await self.session.flush()
-        await self.session.refresh(product)
-        return product
+        result = await self.session.execute(
+            select(Product)
+            .where(Product.id == product.id)
+            .options(selectinload(Product.category))
+        )
+        return result.scalars().first()
 
     async def get_product(self, product_id: int) -> Product | None:
         stmt = await self.session.execute(
             select(Product)
             .where(Product.id == product_id)
+            .options(selectinload(Product.category))
             .where(Product.status == ProductStatus.accept)
         )
         return stmt.scalars().first()
@@ -32,6 +38,7 @@ class ProductRepository:
         result = await self.session.execute(
             select(Product)
             .where(Product.id == product_id)
+            .options(selectinload(Product.category))
         )
         return result.scalars().first()
 
@@ -39,6 +46,7 @@ class ProductRepository:
         result = await self.session.execute(
             select(Product)
             .where(Product.status == ProductStatus.accept)
+            .options(selectinload(Product.category))
             .limit(limit).offset(offset)
         )
         return result.scalars().all()
@@ -46,6 +54,7 @@ class ProductRepository:
     async def get_products_any_status(self, limit: int, offset: int) -> list[Product] | None:
         result = await self.session.execute(
             select(Product)
+            .options(selectinload(Product.category))
             .limit(limit).offset(offset)
         )
         return result.scalars().all()
@@ -55,15 +64,23 @@ class ProductRepository:
             setattr(product, field, value)
         self.session.add(product)
         await self.session.flush()
-        await self.session.refresh(product)
-        return product
+        result = await self.session.execute(
+            select(Product)
+            .where(Product.id == product.id)
+            .options(selectinload(Product.category))
+        )
+        return result.scalars().first()
     
     async def update_product_status(self, product: Product, status: ProductStatus) -> Product:
         product.status = status
         self.session.add(product)
         await self.session.flush()
-        await self.session.refresh(product)
-        return product
+        result = await self.session.execute(
+            select(Product)
+            .where(Product.id == product.id)
+            .options(selectinload(Product.category))
+        )
+        return result.scalars().first()
 
     async def delete_product(self, product: Product) -> Product:
         await self.session.delete(product)
