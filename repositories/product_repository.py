@@ -91,6 +91,7 @@ class ProductRepository:
             select(Product)
             .where(Product.name.ilike(f"%{name}%"))
             .where(Product.status == ProductStatus.accept)
+            .options(selectinload(Product.category))
             .limit(limit).offset(offset)
         )
         return stmt.scalars().all()
@@ -103,7 +104,7 @@ class ProductRepository:
             stmt = stmt.where(Product.price >= min_price)
         if max_price is not None:
             stmt = stmt.where(Product.price <= max_price)
-        stmt = stmt.limit(limit).offset(offset)
+        stmt = stmt.options(selectinload(Product.category)).limit(limit).offset(offset)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
@@ -112,6 +113,7 @@ class ProductRepository:
             select(Product)
             .where(Product.color == product_color) 
             .where(Product.status == ProductStatus.accept)
+            .options(selectinload(Product.category))
             .limit(limit).offset(offset)
         )
         return stmt.scalars().all()
