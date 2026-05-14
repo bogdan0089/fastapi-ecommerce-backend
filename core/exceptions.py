@@ -182,4 +182,11 @@ class OutOfStockError(BaseAppException):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Product {product_id} is out of stock"
         )
+
+class CategoryNotFoundError(BaseAppException):
+    def __init__(self, category_id: int):
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Category {category_id} not found."
+        )
         
