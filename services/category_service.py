@@ -3,6 +3,7 @@ from schemas.category_schema import CategoryCreate, ResponseCategory
 from models.models import Category
 from core.redis import redis_client
 from pydantic import TypeAdapter
+from core.exceptions import CategoryNotFoundError
 
 
 _category_list_adapter = TypeAdapter(list[ResponseCategory])
@@ -35,3 +36,11 @@ class CategoryService:
             ex=60
         )
         return validated
+
+    @staticmethod
+    async def delete_category(category_id: int) -> None:
+        async with UnitOfWork() as uow:
+            category = await uow.category.get_category(category_id)
+            if not category:
+                raise CategoryNotFoundError(category_id)
+            await uow.category.delete_category(category)
