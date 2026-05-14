@@ -2,8 +2,7 @@ from groq import AsyncGroq
 from core.config import settings
 from database.unit_of_work import UnitOfWork
 from core.exceptions import (
-ClientNotFoundError,
-ProductsNotFound
+ClientNotFoundError
 )
 
 
