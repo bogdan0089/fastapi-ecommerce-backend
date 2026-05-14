@@ -44,3 +44,5 @@ class CategoryService:
             if not category:
                 raise CategoryNotFoundError(category_id)
             await uow.category.delete_category(category)
+        async for key in redis_client.scan_iter("category*"):
+            await redis_client.unlink(key)
