@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from core.config import settings
 from app.router_client import router_client
 from app.router_orders import router_order
 from app.router_products import router_product
@@ -18,7 +19,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
     "https://bohdan-shop.duckdns.org",
-    "http://localhost:3000",
+    settings.FRONTEND_URL,
     ],
     allow_credentials=True,
     allow_methods=["*"],
