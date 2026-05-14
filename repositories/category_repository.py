@@ -28,3 +28,10 @@ class CategoryRepository:
             .limit(limit).offset(offset)
         )
         return result.scalars().all()
+    
+    async def get_category(self, category_id: int) -> Category:
+        result = await self.session.get(Category, category_id)
+        return result
+
+    async def delete_category(self, category: Category):
+        await self.session.delete(category)
