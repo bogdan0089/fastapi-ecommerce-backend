@@ -9,6 +9,7 @@ import services.client_service as client_svc
 import services.product_service as product_svc
 import services.order_service as order_svc
 import services.auth_service as auth_svc
+import services.category_service as category_svc
 from core.config import settings
 from app.main import app
 
@@ -48,6 +49,7 @@ def setup_test_db():
     product_svc.redis_client = fake
     order_svc.redis_client = fake
     auth_svc.redis_client = fake
+    category_svc.redis_client = fake
 
     import utils.dependencies as deps_module
     deps_module.redis_client = fake 
