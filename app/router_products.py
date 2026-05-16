@@ -5,7 +5,7 @@ from services.product_service import ProductService
 from utils.dependencies import CurrentClient, CurrentAdmin, CurrentModerator
 
 
-router_product = APIRouter(prefix="/product")
+router_product = APIRouter(prefix="/product", tags=["Products"])
 
 
 @router_product.post("/", response_model=ProductOutputDTO)

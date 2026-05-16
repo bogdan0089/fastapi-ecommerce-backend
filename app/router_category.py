@@ -5,7 +5,7 @@ from schemas.category.output_dto import CategoryOutputDTO
 from utils.dependencies import CurrentAdmin
 
 
-router_category = APIRouter(prefix="/category")
+router_category = APIRouter(prefix="/category", tags=["Categories"])
 
 
 @router_category.post("/create", response_model=CategoryOutputDTO)
