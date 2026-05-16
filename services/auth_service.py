@@ -13,8 +13,9 @@ from core.exceptions import (
 )
 from database.unit_of_work import UnitOfWork
 from models.models import Client
-from schemas.auth_schema import ChangePassword, TokenResponse, ChangeRole, ForgotPassword, ResetPassword
-from schemas.client_schema import ClientCreate
+from schemas.auth.input_dto import ChangePasswordDTO, ChangeRoleDTO, ForgotPasswordDTO, ResetPasswordDTO
+from schemas.auth.output_dto import TokenOutputDTO
+from schemas.client.input_dto import ClientCreateDTO
 from utils.hash import hash_password, verify_password
 import uuid
 from core.redis import redis_client
@@ -58,7 +59,7 @@ class AuthService:
         return AuthService.create_access_token(client_id)
 
     @staticmethod
-    async def register_client(data: ClientCreate) -> Client:
+    async def register_client(data: ClientCreateDTO) -> Client:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client_email(data.email)
             if client:
@@ -76,7 +77,7 @@ class AuthService:
         }
 
     @staticmethod
-    async def client_login(data: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
+    async def client_login(data: OAuth2PasswordRequestForm = Depends()) -> TokenOutputDTO:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client_email(data.username)
             if not client:
@@ -87,7 +88,7 @@ class AuthService:
                 raise VerifyPasswordError()
             token = AuthService.create_access_token(client.id)
             refresh_token = AuthService.create_refresh_token(client.id)
-            return TokenResponse(
+            return TokenOutputDTO(
                 access_token=token,
                 refresh_token=refresh_token,
                 token_type="bearer",
@@ -98,7 +99,7 @@ class AuthService:
             )
 
     @staticmethod
-    async def change_password(data: ChangePassword, current_client: Client) -> dict:
+    async def change_password(data: ChangePasswordDTO, current_client: Client) -> dict:
         if not verify_password(data.old_password, current_client.hashed_password):
             raise VerifyPasswordError()
         new_hashed = hash_password(data.new_password)
@@ -110,7 +111,7 @@ class AuthService:
         return {"message": "Password changed successfully."}
         
     @staticmethod
-    async def change_role(client_id: int, data: ChangeRole) -> Client:
+    async def change_role(client_id: int, data: ChangeRoleDTO) -> Client:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client(client_id)
             if not client:
@@ -135,7 +136,7 @@ class AuthService:
         }
             
     @staticmethod
-    async def forgot_password(data: ForgotPassword):
+    async def forgot_password(data: ForgotPasswordDTO):
         async with UnitOfWork() as uow:
             client = await uow.client.get_client_email(data.email)
             if not client:
@@ -148,7 +149,7 @@ class AuthService:
         }
 
     @staticmethod
-    async def reset_password(data: ResetPassword):
+    async def reset_password(data: ResetPasswordDTO):
         raw = await redis_client.get(f"reset_token:{data.reset_token}")
         if not raw:
             raise TokenInvalidError()

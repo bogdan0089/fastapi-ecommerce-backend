@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 from core.enum import TransactionType
-from schemas.transaction_schema import CreateTransaction
+from schemas.transaction.input_dto import TransactionCreateDTO
 
 
 def test_get_my_transaction(client, auth_headers):
@@ -10,7 +10,7 @@ def test_get_my_transaction(client, auth_headers):
     
 
 def test_create_transaction_valid():
-    tr= CreateTransaction(
+    tr= TransactionCreateDTO(
         amount=200.0,
         type=TransactionType.deposit,
         description="i love python",
@@ -22,15 +22,15 @@ def test_create_transaction_valid():
 
 def test_create_transaction_invalid_type():
     with pytest.raises(ValidationError):
-        CreateTransaction(amount=100.0, type="invalid_type", description="test", client_fk=1)
+        TransactionCreateDTO(amount=100.0, type="invalid_type", description="test", client_fk=1)
 
 
 def test_create_transaction_missing_amount():
     with pytest.raises(ValidationError):
-        CreateTransaction(type=TransactionType.withdraw, description="test", client_fk=1)
+        TransactionCreateDTO(type=TransactionType.withdraw, description="test", client_fk=1)
 
 
 def test_all_transaction_types():
     for tx_type in TransactionType:
-        tx = CreateTransaction(amount=10.0, type=tx_type, description="test", client_fk=1)
+        tx = TransactionCreateDTO(amount=10.0, type=tx_type, description="test", client_fk=1)
         assert tx.type == tx_type

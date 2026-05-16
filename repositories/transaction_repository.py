@@ -2,7 +2,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.models import Transaction
-from schemas.transaction_schema import CreateTransaction
+from schemas.transaction.input_dto import TransactionCreateDTO
 
 
 class TransactionRepository:
@@ -10,7 +10,7 @@ class TransactionRepository:
         self.session = session
 
 
-    async def create_transaction(self, data: CreateTransaction) -> Transaction:
+    async def create_transaction(self, data: TransactionCreateDTO) -> Transaction:
         transaction = Transaction(
             **data.model_dump()
         )

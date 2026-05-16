@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from core.enum import OrderStatus
 from models.models import Order, OrderProduct
-from schemas.order_schema import OrderCreate, OrderUpdateRequest
+from schemas.order.input_dto import OrderCreateInternalDTO, OrderUpdateDTO
 
 
 class OrderRepository:
@@ -12,7 +12,7 @@ class OrderRepository:
         self.session = session
 
 
-    async def create_order(self, data: OrderCreate) -> Order:
+    async def create_order(self, data: OrderCreateInternalDTO) -> Order:
         order = Order(
             **data.model_dump()
         )
@@ -42,7 +42,7 @@ class OrderRepository:
         )
         return result.scalars().all()
 
-    async def orders_update(self, order: Order, data: OrderUpdateRequest) -> Order:
+    async def orders_update(self, order: Order, data: OrderUpdateDTO) -> Order:
         for field, value in data.model_dump().items():
             setattr(order, field, value)
         self.session.add(order)

@@ -1,4 +1,4 @@
-from schemas.category_schema import CategoryCreate, ResponseCategory
+from schemas.category.input_dto import CategoryCreateDTO
 from models.models import Category
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -11,7 +11,7 @@ class CategoryRepository:
 
     async def create_category(
             self,
-            data:CategoryCreate
+            data: CategoryCreateDTO
     ) -> Category:
         category = Category(
             **data.model_dump()

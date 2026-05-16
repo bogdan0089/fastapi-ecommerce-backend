@@ -18,21 +18,22 @@ from core.exceptions import (
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Client, Order
-from schemas.order_schema import OrderCreate, ResponseOrder, OrderUpdateRequest
-from schemas.transaction_schema import CreateTransaction
+from schemas.order.input_dto import OrderCreateInternalDTO, OrderUpdateDTO
+from schemas.order.output_dto import OrderOutputDTO
+from schemas.transaction.input_dto import TransactionCreateDTO
 from utils.connection_manager import connection
 from celery_app import send_order_status_email
 from pydantic import TypeAdapter
 
 
-_orders_list_adapter = TypeAdapter(list[ResponseOrder])
+_orders_list_adapter = TypeAdapter(list[OrderOutputDTO])
 
 class OrderService:
 
     @staticmethod
     async def create_order(title: str, current_client: Client) -> Order:
         async with UnitOfWork() as uow:
-            order = await uow.order.create_order(OrderCreate(title=title, client_id=current_client.id))
+            order = await uow.order.create_order(OrderCreateInternalDTO(title=title, client_id=current_client.id))
         async for key in redis_client.scan_iter("order*"):
             await redis_client.unlink(key)
         return order
@@ -78,7 +79,7 @@ class OrderService:
                     required_role="Owner or Admin",
                     client_role=current_client.role.value
                 )
-            updated = await uow.order.orders_update(order, OrderUpdateRequest(title=title))
+            updated = await uow.order.orders_update(order, OrderUpdateDTO(title=title))
         async for key in redis_client.scan_iter("order*"):
             await redis_client.unlink(key)
         return updated
@@ -162,7 +163,7 @@ class OrderService:
             if order.status == OrderStatus.completed:
                 amount = sum(op.product.price * op.quantity for op in order.order_products)
                 client.balance += amount
-                await uow.transaction.create_transaction(CreateTransaction(
+                await uow.transaction.create_transaction(TransactionCreateDTO(
                     amount=amount,
                     type=TransactionType.refund,
                     description="Order refund",
@@ -191,7 +192,7 @@ class OrderService:
                 raise ProductNotFound(product_id)
             if product.status != ProductStatus.accept:
                 raise ProductNotApprovedError(product_id)
-            order = await uow.order.create_order(OrderCreate(title=title, client_id=client_id))
+            order = await uow.order.create_order(OrderCreateInternalDTO(title=title, client_id=client_id))
             await uow.order.add_product_to_order(order.id, product.id, 1)
             return order
 
@@ -252,7 +253,7 @@ class OrderService:
             client.balance -= amount
             for op in order.order_products:
                 op.product.quantity -= op.quantity
-            await uow.transaction.create_transaction(CreateTransaction(
+            await uow.transaction.create_transaction(TransactionCreateDTO(
                 amount=amount,
                 type=TransactionType.purchase,
                 description="Order checkout",

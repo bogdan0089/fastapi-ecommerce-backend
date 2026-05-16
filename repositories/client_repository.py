@@ -3,8 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from models.models import Client
-from schemas.client_schema import ClientUpdate, ClientCreate
-from schemas.auth_schema import ChangeRole
+from schemas.client.input_dto import ClientUpdateDTO, ClientCreateDTO
+from schemas.auth.input_dto import ChangeRoleDTO
 
 
 class ClientRepository:
@@ -14,7 +14,7 @@ class ClientRepository:
 
     async def create_client(
             self,
-            data: ClientCreate,
+            data: ClientCreateDTO,
             hashed: str
     ) -> Client:
         client = Client(
@@ -59,7 +59,7 @@ class ClientRepository:
         )
         return result.scalars().first()
     
-    async def client_update(self, client: Client, data: ClientUpdate) -> Client:
+    async def client_update(self, client: Client, data: ClientUpdateDTO) -> Client:
         for field, value in data.model_dump().items():
             setattr(client, field, value)
         self.session.add(client)
@@ -91,7 +91,7 @@ class ClientRepository:
         await self.session.refresh(client)
         return client
     
-    async def change_role(self, client: Client, role: ChangeRole) -> Client:
+    async def change_role(self, client: Client, role: ChangeRoleDTO) -> Client:
         for field, value in role.model_dump().items():
             setattr(client, field, value)
         self.session.add(client)

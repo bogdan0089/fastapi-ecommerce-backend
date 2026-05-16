@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from schemas.product_schema import ProductCreate, ProductUpdate
+from schemas.product.input_dto import ProductCreateDTO, ProductUpdateDTO
 from tests.conftest import _db_execute
 
 
@@ -77,31 +77,31 @@ def test_filter_products_by_price(client, auth_headers):
 
 
 def test_product_create_valid():
-    product = ProductCreate(name="Nike Air", price=99.99, color="black")
+    product = ProductCreateDTO(name="Nike Air", price=99.99, color="black")
     assert product.name == "Nike Air"
     assert product.price == 99.99
     assert product.color == "black"
 
 
 def test_product_create_default_price():
-    product = ProductCreate(name="Nike Air", color="black")
+    product = ProductCreateDTO(name="Nike Air", color="black")
     assert product.price == 0.0
     assert product.color == "black"
 
 
 def test_product_create_missing_name():
     with pytest.raises(ValidationError):
-        ProductCreate()
+        ProductCreateDTO()
 
 
 def test_product_update_all_optional():
-    update = ProductUpdate()
+    update = ProductUpdateDTO()
     assert update.name is None
     assert update.price is None
 
 
 def test_product_update_only_price():
-    update = ProductUpdate(price=49.99)
+    update = ProductUpdateDTO(price=49.99)
     assert update.price == 49.99
     assert update.name is None
 
