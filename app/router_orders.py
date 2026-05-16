@@ -10,7 +10,7 @@ from services.order_service import OrderService
 from utils.dependencies import CurrentClient, CurrentAdmin
 
 
-router_order = APIRouter(prefix="/order")
+router_order = APIRouter(prefix="/order", tags=["Orders"])
 
 
 @router_order.post("/create_orders", response_model=OrderOutputDTO)

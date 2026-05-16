@@ -4,7 +4,7 @@ from services.transaction_service import TransactionService
 from utils.dependencies import CurrentClient
 
 
-router_transaction = APIRouter(prefix="/transaction")
+router_transaction = APIRouter(prefix="/transaction", tags=["Transactions"])
 
 
 @router_transaction.get("/me/transactions", response_model=list[TransactionOutputDTO])

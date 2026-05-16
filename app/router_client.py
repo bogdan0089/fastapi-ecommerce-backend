@@ -7,7 +7,7 @@ from services.order_service import OrderService
 from utils.dependencies import CurrentClient, CurrentAdmin
 
 
-router_client = APIRouter(prefix="/client")
+router_client = APIRouter(prefix="/client", tags=["Clients"])
 
 
 @router_client.get("/me", response_model=ClientOutputDTO)

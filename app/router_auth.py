@@ -14,7 +14,7 @@ from services.auth_service import AuthService
 from utils.dependencies import CurrentClient, CurrentAdmin, RateLimit
 
 
-router_auth = APIRouter(prefix="/auth")
+router_auth = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router_auth.post("/register")

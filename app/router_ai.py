@@ -5,7 +5,7 @@ from schemas.product.input_dto import ProductGenerateDescriptionDTO, AiChatDTO
 from utils.dependencies import RateLimit
 
 
-router_ai = APIRouter(prefix="/ai")
+router_ai = APIRouter(prefix="/ai", tags=["AI"])
 
 
 @router_ai.get("/recommendations")

@@ -8,7 +8,7 @@ from services.payment_service import PaymentService
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-router_payment = APIRouter(prefix="/payment")
+router_payment = APIRouter(prefix="/payment", tags=["Payment"])
 
 
 @router_payment.post("/create")
