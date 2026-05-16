@@ -2,7 +2,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.models import Product
-from schemas.product_schema import ProductCreate, ProductUpdate
+from schemas.product.input_dto import ProductCreateDTO, ProductUpdateDTO
 from core.enum import ProductStatus
 from sqlalchemy.orm import selectinload
 
@@ -12,7 +12,7 @@ class ProductRepository:
         self.session = session
 
 
-    async def create_product(self, data: ProductCreate) -> Product:
+    async def create_product(self, data: ProductCreateDTO) -> Product:
         product = Product(
             **data.model_dump()
         )
@@ -59,7 +59,7 @@ class ProductRepository:
         )
         return result.scalars().all()
 
-    async def update_product(self, product: Product, data: ProductUpdate) -> Product:
+    async def update_product(self, product: Product, data: ProductUpdateDTO) -> Product:
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(product, field, value)
         self.session.add(product)

@@ -1,6 +1,6 @@
 from core.enum import TransactionType
 from database.unit_of_work import UnitOfWork
-from schemas.transaction_schema import CreateTransaction
+from schemas.transaction.input_dto import TransactionCreateDTO
 
 
 
@@ -12,7 +12,7 @@ class PaymentService:
             client = await uow.client.get_client(client_id)
             if client:
                 client.balance += amount
-                await uow.transaction.create_transaction(CreateTransaction(
+                await uow.transaction.create_transaction(TransactionCreateDTO(
                     amount=amount,
                     type=TransactionType.deposit,
                     description="deposit",

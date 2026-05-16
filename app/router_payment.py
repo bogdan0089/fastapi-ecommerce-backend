@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 import stripe
 from core.config import settings
-from schemas.transaction_schema import RequestPayment
+from schemas.transaction.input_dto import PaymentRequestDTO
 from utils.dependencies import CurrentClient, RateLimit
 from services.payment_service import PaymentService
 
@@ -12,7 +12,7 @@ router_payment = APIRouter(prefix="/payment")
 
 
 @router_payment.post("/create")
-async def payment_create(_: RateLimit, data: RequestPayment, current_client: CurrentClient):
+async def payment_create(_: RateLimit, data: PaymentRequestDTO, current_client: CurrentClient):
     intent = stripe.PaymentIntent.create(
         amount=int(data.amount * 100),
         currency="usd",

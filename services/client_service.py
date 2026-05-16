@@ -10,18 +10,19 @@ from core.exceptions import (
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Client
-from schemas.client_schema import ClientUpdate, ResponseClient
-from schemas.transaction_schema import CreateTransaction
+from schemas.client.input_dto import ClientUpdateDTO
+from schemas.client.output_dto import ClientOutputDTO
+from schemas.transaction.input_dto import TransactionCreateDTO
 from core.enum import Role, OrderStatus, TransactionType
 from pydantic import TypeAdapter
 
 
-_client_list_adapter = TypeAdapter(list[ResponseClient])
+_client_list_adapter = TypeAdapter(list[ClientOutputDTO])
 
 class ClientService:
 
     @staticmethod
-    async def get_all_client(limit, offset) -> list[ResponseClient]:
+    async def get_all_client(limit, offset) -> list[ClientOutputDTO]:
         cached_key = f"clients:limit={limit}:offset={offset}"
         cached = await redis_client.get(cached_key)
         if cached:
@@ -51,7 +52,7 @@ class ClientService:
             return client
 
     @staticmethod
-    async def client_update(client_id: int, data: ClientUpdate, current_client: Client) -> Client:
+    async def client_update(client_id: int, data: ClientUpdateDTO, current_client: Client) -> Client:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client(client_id)
             if not client:
@@ -132,7 +133,7 @@ class ClientService:
                 )
             if amount <= 0:
                 raise InvalidAmountError(amount)
-            await uow.transaction.create_transaction(CreateTransaction(
+            await uow.transaction.create_transaction(TransactionCreateDTO(
                 amount=amount,
                 type=TransactionType.deposit,
                 description="deposit",
@@ -155,7 +156,7 @@ class ClientService:
                 raise InvalidAmountError(amount)
             if amount > client.balance:
                 raise NotEnoughMoneyError(client_id)
-            await uow.transaction.create_transaction(CreateTransaction(
+            await uow.transaction.create_transaction(TransactionCreateDTO(
                 amount=amount,
                 type=TransactionType.withdraw,
                 description="withdraw",

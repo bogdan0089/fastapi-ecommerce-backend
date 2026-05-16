@@ -2,17 +2,18 @@ from core.exceptions import ProductNotFound
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Product
-from schemas.product_schema import ProductCreate, ProductUpdate, ResponseProduct
+from schemas.product.input_dto import ProductCreateDTO, ProductUpdateDTO
+from schemas.product.output_dto import ProductOutputDTO
 from core.enum import ProductStatus
 from pydantic import TypeAdapter
 
 
-_product_list_adapter = TypeAdapter(list[ResponseProduct])
+_product_list_adapter = TypeAdapter(list[ProductOutputDTO])
 
 class ProductService:
 
     @staticmethod
-    async def create_product(data: ProductCreate) -> Product:
+    async def create_product(data: ProductCreateDTO) -> Product:
         async with UnitOfWork() as uow:
             product = await uow.product.create_product(data)
         async for key in redis_client.scan_iter("product*"):
@@ -28,7 +29,7 @@ class ProductService:
             return product
 
     @staticmethod
-    async def get_products(limit, offset) -> list[ResponseProduct]:
+    async def get_products(limit, offset) -> list[ProductOutputDTO]:
         async with UnitOfWork() as uow:
             cached_key = f"products:limit={limit}:offset={offset}"
             cached = await redis_client.get(cached_key)
@@ -45,7 +46,7 @@ class ProductService:
             return validated
 
     @staticmethod
-    async def get_products_any_status(limit: int, offset: int) -> list[ResponseProduct]:
+    async def get_products_any_status(limit: int, offset: int) -> list[ProductOutputDTO]:
         async with UnitOfWork() as uow:
             cached_key = f"products_admin:limit={limit}:offset={offset}"
             cached = await redis_client.get(cached_key)
@@ -62,7 +63,7 @@ class ProductService:
             return validated
 
     @staticmethod
-    async def update_product(product_id: int, data: ProductUpdate) -> Product:
+    async def update_product(product_id: int, data: ProductUpdateDTO) -> Product:
         async with UnitOfWork() as uow:
             product = await uow.product.get_product(product_id)
             if not product:
