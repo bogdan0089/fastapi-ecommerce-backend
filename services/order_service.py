@@ -39,7 +39,7 @@ class OrderService:
         return order
 
     @staticmethod
-    async def get_orders(limit, offset) -> list[ResponseOrder]:
+    async def get_orders(limit, offset) -> list[OrderOutputDTO]:
         cached_key = f"orders:limit={limit}:offset={offset}"
         cached = await redis_client.get(cached_key)
         if cached:

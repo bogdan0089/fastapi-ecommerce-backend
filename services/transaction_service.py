@@ -5,7 +5,6 @@ from core.exceptions import (
 )
 from database.unit_of_work import UnitOfWork
 from models.models import Client, Transaction
-from schemas.transaction_schema import CreateTransaction
 
 
 class TransactionService:
