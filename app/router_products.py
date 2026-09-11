@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from schemas.product.input_dto import ProductCreateDTO, ProductStatusUpdateDTO, ProductUpdateDTO
-from schemas.product.output_dto import ProductOutputDTO
+from schemas.product.output_dto import ProductOutputDTO, ProductPageDTO
 from services.product_service import ProductService
 from utils.dependencies import (
     CurrentAdmin,
@@ -32,6 +32,19 @@ async def filter_products(
     limit: Limit = 15, offset: Offset = 0
 ) -> list:
     return await ProductService.filter_by_price(min_price, max_price, limit, offset)
+
+# Declared before /{product_id}: routes match in order, so a later /catalogue
+# would be read as a product id and answered with a 422.
+@router_product.get("/catalogue", response_model=ProductPageDTO)
+async def browse_catalogue(
+    name: str | None = None,
+    category_id: int | None = None,
+    min_price: float | None = Query(None, ge=0),
+    max_price: float | None = Query(None, ge=0),
+    limit: Limit = 12,
+    offset: Offset = 0,
+) -> ProductPageDTO:
+    return await ProductService.browse(name, category_id, min_price, max_price, limit, offset)
 
 @router_product.get("/{product_id}", response_model=ProductOutputDTO)
 async def get_product(product_id: int) -> ProductOutputDTO:
