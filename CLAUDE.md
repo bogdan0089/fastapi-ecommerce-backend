@@ -158,6 +158,14 @@ expose it as `float` so the JSON the frontend receives stays unchanged.
 | `utils/cache.py` | versioned cache keys |
 | `utils/connection_manager.py` | WebSocket fan-out to admins |
 
+**Catalogue** - `GET /product/catalogue` is the one endpoint the shop screen needs: name,
+`category_id` and a price range, paged, answering `{items, total, price_ceiling}`. It exists
+because the screen used to pull 200 products and filter them in the browser - correct only
+while the catalogue stays small. Two queries: the page itself (`joinedload` on the category,
+a many-to-one, so it rides along in the same round trip), and one aggregate carrying both the
+total and the ceiling. The count applies the price filter so paging is right; the ceiling does
+not, so dragging the price slider cannot move the end of its own track.
+
 **Paging** - every list endpoint takes `limit: Limit` and `offset: Offset` from
 `utils/dependencies.py`, which bound them to 1..`MAX_PAGE_SIZE` (200) and 0.. and answer 422
 outside that. Unbounded, `?limit=1000000` on a public endpoint loaded a million rows into ORM

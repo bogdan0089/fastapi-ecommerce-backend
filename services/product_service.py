@@ -6,7 +6,7 @@ from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Product
 from schemas.product.input_dto import ProductCreateDTO, ProductUpdateDTO
-from schemas.product.output_dto import ProductOutputDTO
+from schemas.product.output_dto import ProductOutputDTO, ProductPageDTO
 from utils import cache
 from utils.logger import get_logger
 
@@ -49,6 +49,47 @@ class ProductService:
                 ex=60
             )
             return validated
+
+    @staticmethod
+    async def browse(
+        name: str | None,
+        category_id: int | None,
+        min_price: float | None,
+        max_price: float | None,
+        limit: int,
+        offset: int,
+    ) -> ProductPageDTO:
+        """One filtered page of the catalogue, with its total and price ceiling."""
+        suffix = (
+            f"browse:name={name or ''}:cat={category_id or ''}"
+            f":min={min_price or ''}:max={max_price or ''}:limit={limit}:offset={offset}"
+        )
+        cached_key = await cache.key("product", suffix)
+        cached = await redis_client.get(cached_key)
+        if cached:
+            return ProductPageDTO.model_validate_json(cached)
+
+        async with UnitOfWork() as uow:
+            products = await uow.product.browse(
+                name=name,
+                category_id=category_id,
+                min_price=min_price,
+                max_price=max_price,
+                limit=limit,
+                offset=offset,
+            )
+            total, ceiling = await uow.product.browse_summary(
+                name=name, category_id=category_id,
+                min_price=min_price, max_price=max_price,
+            )
+
+        page = ProductPageDTO(
+            items=_product_list_adapter.validate_python(products),
+            total=total,
+            price_ceiling=float(ceiling) if ceiling is not None else 0.0,
+        )
+        await redis_client.set(cached_key, page.model_dump_json(), ex=60)
+        return page
 
     @staticmethod
     async def get_products_any_status(limit: int, offset: int) -> list[ProductOutputDTO]:
