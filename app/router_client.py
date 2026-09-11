@@ -5,7 +5,7 @@ from schemas.client.output_dto import ClientOrdersCountDTO, ClientOutputDTO
 from schemas.order.output_dto import OrderOutputDTO
 from services.client_service import ClientService
 from services.order_service import OrderService
-from utils.dependencies import CurrentAdmin, CurrentClient
+from utils.dependencies import CurrentAdmin, CurrentClient, Limit, Offset
 
 router_client = APIRouter(prefix="/client", tags=["Clients"])
 
@@ -19,7 +19,7 @@ async def get_my_stats(current_client: CurrentClient) -> dict:
     return await ClientService.get_client_stats(current_client)
 
 @router_client.get("/me/orders", response_model=list[OrderOutputDTO])
-async def get_my_orders(current_client: CurrentClient, limit: int = 10, offset: int = 0) -> list:
+async def get_my_orders(current_client: CurrentClient, limit: Limit = 10, offset: Offset = 0) -> list:
     return await OrderService.get_my_orders(current_client, limit, offset)
 
 @router_client.post("/{client_id}/deposit", response_model=ClientOutputDTO)
@@ -35,7 +35,7 @@ async def client_withdraw(
     return await ClientService.client_withdraw(client_id, withdraw.amount, current_client)
 
 @router_client.get("/get_clients", response_model=list[ClientOutputDTO])
-async def get_clients(_: CurrentAdmin, limit: int = 10, offset: int = 0) -> list:
+async def get_clients(_: CurrentAdmin, limit: Limit = 10, offset: Offset = 0) -> list:
     return await ClientService.get_all_client(limit, offset)
 
 @router_client.get("/{client_id}", response_model=ClientOutputDTO)

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, Query, Request
 from fastapi.security import OAuth2PasswordBearer
 
 from core.enum import Role
@@ -9,6 +9,14 @@ from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Client
 from services.auth_service import AuthService
+
+MAX_PAGE_SIZE = 200
+
+# Without a ceiling, ?limit=1000000 on any public list endpoint loads a million
+# rows into ORM objects and serialises them. A negative offset reaches Postgres
+# and fails there as a 500 instead of a 422.
+Limit = Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)]
+Offset = Annotated[int, Query(ge=0)]
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/client_login")
 

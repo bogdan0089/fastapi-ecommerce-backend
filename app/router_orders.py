@@ -8,7 +8,7 @@ from schemas.order.input_dto import (
 )
 from schemas.order.output_dto import OrderOutputDTO
 from services.order_service import OrderService
-from utils.dependencies import CurrentAdmin, CurrentClient
+from utils.dependencies import CurrentAdmin, CurrentClient, Limit, Offset
 
 router_order = APIRouter(prefix="/order", tags=["Orders"])
 
@@ -18,7 +18,7 @@ async def create_order(order: OrderCreateDTO, current_client: CurrentClient) -> 
     return await OrderService.create_order(title=order.title, current_client=current_client)
 
 @router_order.get("/get_orders", response_model=list[OrderOutputDTO])
-async def get_orders(_: CurrentAdmin, limit: int = 10, offset: int = 0) -> list:
+async def get_orders(_: CurrentAdmin, limit: Limit = 10, offset: Offset = 0) -> list:
     return await OrderService.get_orders(limit, offset)
 
 @router_order.get("/{order_id}/orders", response_model=OrderOutputDTO)

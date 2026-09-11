@@ -154,9 +154,15 @@ expose it as `float` so the JSON the frontend receives stays unchanged.
 | `schemas/<resource>/` | `input_dto.py` and `output_dto.py`, Pydantic v2, split on purpose |
 | `core/exceptions.py` | custom `HTTPException` subclasses - raise these, never a bare `HTTPException` |
 | `core/enum.py` | `Role`, `OrderStatus`, `ProductStatus`, `TransactionType` |
-| `utils/dependencies.py` | `CurrentClient`, `CurrentAdmin` (superadmin), `CurrentModerator` (superadmin or moderator) |
+| `utils/dependencies.py` | `CurrentClient`, `CurrentAdmin` (superadmin), `CurrentModerator` (superadmin or moderator), `Limit`, `Offset`, `RateLimit` |
 | `utils/cache.py` | versioned cache keys |
 | `utils/connection_manager.py` | WebSocket fan-out to admins |
+
+**Paging** - every list endpoint takes `limit: Limit` and `offset: Offset` from
+`utils/dependencies.py`, which bound them to 1..`MAX_PAGE_SIZE` (200) and 0.. and answer 422
+outside that. Unbounded, `?limit=1000000` on a public endpoint loaded a million rows into ORM
+objects; a negative offset reached Postgres and came back a 500. The ceiling is 200 because
+that is the largest page the catalogue screen asks for.
 
 ## Auth and roles
 
