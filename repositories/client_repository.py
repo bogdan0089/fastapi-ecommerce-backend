@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from models.models import Client
+from models.models import Client, Order, OrderProduct, Product
 from schemas.auth.input_dto import ChangeRoleDTO
 from schemas.client.input_dto import ClientCreateDTO, ClientUpdateDTO
 
@@ -78,6 +78,26 @@ class ClientRepository:
             select(Client).options(joinedload(Client.orders)).where(Client.id == client_id)
         )
         return result.scalars().first()
+
+    async def purchased_product_names(self, client_id: int) -> list[str]:
+        """Distinct names this client has bought, in one query.
+
+        Walking client -> orders -> order_products -> product loads the whole
+        purchase history into memory to end up with a handful of names, and it
+        grows with every order the client ever placed.
+
+        Ordered by name so the same history always renders the same prompt, and
+        therefore lands on the same cache key.
+        """
+        result = await self.session.execute(
+            select(Product.name)
+            .join(OrderProduct, OrderProduct.product_id == Product.id)
+            .join(Order, Order.id == OrderProduct.order_id)
+            .where(Order.client_id == client_id)
+            .distinct()
+            .order_by(Product.name)
+        )
+        return list(result.scalars().all())
 
     async def deposit_client(self, client: Client, amount: float) -> Client:
         client.balance += amount

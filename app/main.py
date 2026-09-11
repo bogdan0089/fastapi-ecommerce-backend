@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,8 +20,16 @@ from app.router_websocket import router_websocket
 from core.config import settings
 from core.redis import redis_client
 from database.database import async_session_maker
+from services.ai.gemini import close_http
 
-app = FastAPI(title="Online Shop")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    yield
+    await close_http()
+
+
+app = FastAPI(title="Online Shop", lifespan=lifespan)
 
 
 app.add_middleware(

@@ -28,7 +28,11 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
-    GROQ_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    LLM_MODEL: str = "gemini-3.5-flash"
+    LLM_TIMEOUT_SECONDS: float = 20.0
+    LLM_MAX_OUTPUT_TOKENS: int = 512
+    LLM_CACHE_TTL_SECONDS: int = 3600
 
     DEBUG: bool = False
     BASE_URL: str = "http://localhost:8000"

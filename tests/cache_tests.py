@@ -39,6 +39,21 @@ def test_second_invalidate_changes_the_key_again(monkeypatch):
     asyncio.run(cache.invalidate("order"))
     assert asyncio.run(cache.key("order", "list:limit=10")) != after_first
 
+def test_version_starts_at_zero(monkeypatch):
+    monkeypatch.setattr(cache, "redis_client", VersionRedis())
+    assert asyncio.run(cache.version("order")) == 0
+
+def test_version_counts_invalidations(monkeypatch):
+    monkeypatch.setattr(cache, "redis_client", VersionRedis())
+    asyncio.run(cache.invalidate("order"))
+    asyncio.run(cache.invalidate("order"))
+    assert asyncio.run(cache.version("order")) == 2
+
+def test_version_is_per_namespace(monkeypatch):
+    monkeypatch.setattr(cache, "redis_client", VersionRedis())
+    asyncio.run(cache.invalidate("order"))
+    assert asyncio.run(cache.version("product")) == 0
+
 def test_invalidate_leaves_other_resources_alone(monkeypatch):
     monkeypatch.setattr(cache, "redis_client", VersionRedis())
     product_key = asyncio.run(cache.key("product", "list:limit=10"))
