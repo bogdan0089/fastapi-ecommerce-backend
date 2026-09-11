@@ -46,6 +46,18 @@ def test_get_product_not_found(client):
     assert response.status_code == 404
 
 
+def test_an_oversized_limit_is_refused(client):
+    assert client.get("/product/all?limit=1000000").status_code == 422
+
+def test_a_negative_offset_is_refused(client):
+    assert client.get("/product/all?limit=10&offset=-5").status_code == 422
+
+def test_a_zero_limit_is_refused(client):
+    assert client.get("/product/all?limit=0").status_code == 422
+
+def test_the_limit_the_catalogue_page_asks_for_is_allowed(client):
+    assert client.get("/product/all?limit=200").status_code == 200
+
 def test_get_all_products(client):
     response = client.get("/product/all")
     assert response.status_code in (200, 404)

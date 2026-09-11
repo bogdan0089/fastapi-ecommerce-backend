@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from schemas.category.input_dto import CategoryCreateDTO
 from schemas.category.output_dto import CategoryOutputDTO
 from services.category_service import CategoryService
-from utils.dependencies import CurrentAdmin
+from utils.dependencies import CurrentAdmin, Limit, Offset
 
 router_category = APIRouter(prefix="/category", tags=["Categories"])
 
@@ -13,7 +13,7 @@ async def create_category(data: CategoryCreateDTO, _: CurrentAdmin):
     return await CategoryService.create_category(data)
 
 @router_category.get("/all", response_model=list[CategoryOutputDTO])
-async def get_all_category(limit: int = 15, offset: int = 0) -> list[CategoryOutputDTO]:
+async def get_all_category(limit: Limit = 15, offset: Offset = 0) -> list[CategoryOutputDTO]:
     return await CategoryService.get_all_category(limit, offset)
 
 @router_category.delete("/{category_id}", status_code=204)
