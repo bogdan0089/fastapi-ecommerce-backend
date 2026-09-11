@@ -231,3 +231,10 @@ class EmailQueueError(BaseAppException):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Could not queue the email right now. Please try again shortly.",
         )
+
+class LLMUnavailableError(BaseAppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The assistant is unavailable right now. Please try again shortly.",
+        )

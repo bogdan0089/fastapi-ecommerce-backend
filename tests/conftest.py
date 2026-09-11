@@ -11,6 +11,7 @@ from sqlalchemy.pool import NullPool
 import database.database as db_module
 import database.unit_of_work as uow_module
 import models.models  # noqa: F401  - registers every table on Base.metadata
+import services.ai.ai_service as ai_svc
 import services.auth_service as auth_svc
 import services.category_service as category_svc
 import services.client_service as client_svc
@@ -75,6 +76,7 @@ def setup_test_db():
     auth_svc.redis_client = fake
     category_svc.redis_client = fake
     review_svc.redis_client = fake
+    ai_svc.redis_client = fake
 
     import utils.cache as cache_module
     import utils.dependencies as deps_module

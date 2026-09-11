@@ -42,4 +42,3 @@ uvicorn[standard]
 email-validator
 celery[rabbitmq]
 stripe
-groq

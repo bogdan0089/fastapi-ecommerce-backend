@@ -46,7 +46,7 @@ flowchart LR
 
     subgraph External
         STRIPE[Stripe]
-        GROQ[Groq LLM]
+        GEMINI[Gemini]
     end
 
     UI -- HTTPS --> API
@@ -56,7 +56,7 @@ flowchart LR
     API -- queues mail --> MQ --> WORKER --> PG
     API -- PaymentIntent --> STRIPE
     STRIPE -- webhook, retried --> API
-    API -- recommendations, search, chat --> GROQ
+    API -- search, recommendations, chat, descriptions --> GEMINI
 ```
 
 Redis is a cache and nothing else: it is not the broker and holds no task results.
@@ -199,6 +199,24 @@ retries and a send timeout. Dispatched with `.delay()` from `auth_service` and `
 
 **WebSocket** - `WS /ws/admin?token={jwt}`, superadmin only. `ConnectionManager` broadcasts a
 line to every connected admin when an order is checked out.
+
+**Gemini** - four endpoints under `/ai`, all rate limited and client-only. `services/ai/` is
+split on purpose: `provider.py` is the `LLMProvider` Protocol the services depend on,
+`gemini.py` is the only file that knows the vendor, `prompts.py` holds every instruction,
+`ai_service.py` holds the logic. Swapping vendors means one new class; testing means passing
+a fake `provider=`.
+
+| Decision | Why |
+|---|---|
+| REST, not the vendor SDK | `httpx` is already a dependency, the timeout is ours, the payload stays readable. |
+| One `httpx.AsyncClient` per process, closed in the app `lifespan` | A client per call discards the connection pool, so every request repeats the TCP and TLS handshake to Google. Measured: 6.1s cold, 1.5s on the reused connection. |
+| 429 is **not** retried | A quota window resets in tens of seconds. Retrying inside the request burns the rest of the quota three times faster and still makes the caller wait. 408 and 5xx are retried, three attempts, backoff 0.5s then 1s. |
+| `/ai/search` returns products, not prose | The model picks ids against a schema (`responseSchema`), and only ids present in the catalogue survive, so a hallucinated id cannot reach a shopper. |
+| Search answers are parsed **before** they are cached | Caching the raw reply meant one malformed answer served the same error for the whole hour of its TTL. |
+| AI cache keys carry `cache.version("product")` | The `ai` namespace is not bumped by a product write, so without the stamp a new arrival stayed invisible to search for an hour. |
+| Prompts build from `get_catalogue()` rows, not ORM products | Nothing there is returned to a client. Full products plus their categories cost a second query and 100 identity-map entries for text thrown away after the request. `search` is the exception - it returns the products themselves. |
+| `purchased_product_names()` is one `DISTINCT` query | Walking client -> orders -> order_products -> product loaded the whole purchase history to produce a handful of names, and grew with every order ever placed. Chat and recommendations are 2 queries each; they were 5. |
+
 
 ## Business rules worth knowing
 
