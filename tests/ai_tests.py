@@ -5,7 +5,7 @@ import pytest
 
 from core.exceptions import LLMUnavailableError
 from models.models import Product
-from services.ai import prompts
+from services.ai import gemini, prompts
 from services.ai import transport as ai_transport
 from services.ai.ai_service import AiService
 from services.ai.gemini import GeminiProvider
@@ -560,7 +560,26 @@ async def test_a_schema_switches_the_answer_to_json(transport):
 
     generation = client.requests[0]["json"]["generationConfig"]
     assert generation["responseMimeType"] == "application/json"
-    assert generation["responseSchema"] == prompts.SEARCH_SCHEMA
+    assert generation["responseSchema"] == {
+        "type": "OBJECT",
+        "properties": {"ids": {"type": "ARRAY", "items": {"type": "INTEGER"}}},
+        "required": ["ids"],
+    }
+
+
+def test_the_shared_schema_is_ordinary_json_schema():
+    assert prompts.SEARCH_SCHEMA["type"] == "object"
+    assert prompts.SEARCH_SCHEMA["properties"]["ids"]["items"]["type"] == "integer"
+
+
+def test_gemini_upper_cases_the_type_names_and_nothing_else():
+    converted = gemini._to_gemini_schema(
+        {"type": "object", "description": "keep me", "properties": {"n": {"type": "integer"}}}
+    )
+
+    assert converted["type"] == "OBJECT"
+    assert converted["description"] == "keep me"
+    assert converted["properties"]["n"]["type"] == "INTEGER"
 
 
 async def test_no_schema_leaves_the_answer_as_prose(transport):

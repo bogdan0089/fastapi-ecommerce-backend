@@ -19,6 +19,24 @@ THINKING_BUDGET = 0
 TRUNCATED = "MAX_TOKENS"
 
 
+def _to_gemini_schema(schema: Any) -> Any:
+    """Translate ordinary JSON Schema into the dialect Gemini accepts.
+
+    Gemini spells its type names in upper case and nobody else does, so the
+    schema in `prompts` stays vendor-neutral and this payload adapts.
+    """
+    if isinstance(schema, dict):
+        return {
+            key: value.upper()
+            if key == "type" and isinstance(value, str)
+            else _to_gemini_schema(value)
+            for key, value in schema.items()
+        }
+    if isinstance(schema, list):
+        return [_to_gemini_schema(item) for item in schema]
+    return schema
+
+
 class GeminiProvider:
     """Talks to Gemini over its REST API.
 
@@ -46,7 +64,7 @@ class GeminiProvider:
         }
         if json_schema is not None:
             generation["responseMimeType"] = "application/json"
-            generation["responseSchema"] = json_schema
+            generation["responseSchema"] = _to_gemini_schema(json_schema)
         return {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": user}]}],
