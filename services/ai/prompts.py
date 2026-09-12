@@ -49,10 +49,12 @@ def catalogue_block(items: list[tuple[int, str, float, str | None]]) -> str:
     return "\n".join(lines)
 
 
+# Ordinary JSON Schema. Gemini wants its type names upper-cased; that belongs
+# to the Gemini payload, not here, so every provider can read the same schema.
 SEARCH_SCHEMA = {
-    "type": "OBJECT",
+    "type": "object",
     "properties": {
-        "ids": {"type": "ARRAY", "items": {"type": "INTEGER"}},
+        "ids": {"type": "array", "items": {"type": "integer"}},
     },
     "required": ["ids"],
 }
