@@ -20,7 +20,7 @@ from app.router_websocket import router_websocket
 from core.config import settings
 from core.redis import redis_client
 from database.database import async_session_maker
-from services.ai.gemini import close_http
+from services.ai.transport import close_http
 
 
 @asynccontextmanager
