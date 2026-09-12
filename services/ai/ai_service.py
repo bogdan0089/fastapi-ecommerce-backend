@@ -7,8 +7,7 @@ from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Product
 from services.ai import prompts
-from services.ai.gemini import GeminiProvider
-from services.ai.provider import LLMProvider
+from services.ai.provider import LLMProvider, build_provider
 from utils import cache
 from utils.logger import get_logger
 
@@ -19,7 +18,7 @@ NAMESPACE = "ai"
 
 
 def _default_provider() -> LLMProvider:
-    return GeminiProvider()
+    return build_provider()
 
 
 async def _cached(suffix: str, produce) -> str:
@@ -86,7 +85,7 @@ class AiService:
         # Stamped with the catalogue's version: adding or editing a product
         # bumps it, so a new arrival is searchable at once instead of after the
         # hour it would otherwise spend behind a cached answer.
-        answer = await _cached(f"search:c{await cache.version('product')}:{_digest(query)}", ask)
+        answer = await _cached(f"search:{provider.name}:c{await cache.version('product')}:{_digest(query)}", ask)
         ids = json.loads(answer)["ids"]
 
         # Only ids that exist are kept, so a hallucinated id cannot reach a shopper.
@@ -121,7 +120,7 @@ class AiService:
                 user=f"Product: {product_name}",
             )
 
-        return await _cached(f"describe:{_digest(product_name)}", ask)
+        return await _cached(f"describe:{provider.name}:{_digest(product_name)}", ask)
 
     @staticmethod
     async def recommendations(client_id: int, provider: LLMProvider | None = None) -> str:
@@ -145,5 +144,5 @@ class AiService:
             )
 
         return await _cached(
-            f"recs:c{await cache.version('product')}:{client_id}:{_digest(history)}", ask
+            f"recs:{provider.name}:c{await cache.version('product')}:{client_id}:{_digest(history)}", ask
         )

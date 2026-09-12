@@ -28,11 +28,14 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
-    # Which vendor answers the /ai endpoints. Only gemini is wired up so far.
-    LLM_PROVIDER: str = "gemini"
-    GEMINI_API_KEY: str = ""
+    # Which vendor answers the /ai endpoints: "groq" or "gemini".
+    # LLM_MODEL is empty on purpose - each provider then picks a model it is
+    # known to work with. Set it only to override that, and remember it has to
+    # match the provider.
+    LLM_PROVIDER: str = "groq"
     GROQ_API_KEY: str = ""
-    LLM_MODEL: str = "gemini-3.5-flash"
+    GEMINI_API_KEY: str = ""
+    LLM_MODEL: str = ""
     LLM_TIMEOUT_SECONDS: float = 20.0
     LLM_MAX_OUTPUT_TOKENS: int = 512
     LLM_CACHE_TTL_SECONDS: int = 3600

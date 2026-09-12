@@ -57,4 +57,5 @@ SEARCH_SCHEMA = {
         "ids": {"type": "array", "items": {"type": "integer"}},
     },
     "required": ["ids"],
+    "additionalProperties": False,
 }

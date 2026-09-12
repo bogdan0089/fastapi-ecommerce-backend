@@ -5,19 +5,26 @@ import pytest
 
 from core.exceptions import LLMUnavailableError
 from models.models import Product
-from services.ai import gemini, prompts
+from services.ai import gemini, groq, prompts
 from services.ai import transport as ai_transport
 from services.ai.ai_service import AiService
 from services.ai.gemini import GeminiProvider
+from services.ai.groq import GroqProvider
+from services.ai.provider import build_provider
 from utils import cache
 
 
 class FakeProvider:
     """Answers with a script instead of a model, and remembers every call."""
 
-    def __init__(self, *replies: str) -> None:
+    def __init__(self, *replies: str, name: str = "fake:model") -> None:
         self.replies = list(replies)
         self.calls: list[dict] = []
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     async def complete(self, *, system, user, json_schema=None) -> str:
         self.calls.append({"system": system, "user": user, "json_schema": json_schema})
@@ -572,7 +579,7 @@ def test_the_shared_schema_is_ordinary_json_schema():
     assert prompts.SEARCH_SCHEMA["properties"]["ids"]["items"]["type"] == "integer"
 
 
-def test_gemini_upper_cases_the_type_names_and_nothing_else():
+def test_gemini_upper_cases_only_the_type_names():
     converted = gemini._to_gemini_schema(
         {"type": "object", "description": "keep me", "properties": {"n": {"type": "integer"}}}
     )
@@ -580,6 +587,17 @@ def test_gemini_upper_cases_the_type_names_and_nothing_else():
     assert converted["type"] == "OBJECT"
     assert converted["description"] == "keep me"
     assert converted["properties"]["n"]["type"] == "INTEGER"
+
+
+def test_gemini_drops_schema_keys_it_would_reject():
+    converted = gemini._to_gemini_schema(prompts.SEARCH_SCHEMA)
+
+    assert "additionalProperties" not in converted
+    assert converted["required"] == ["ids"]
+
+
+def test_groq_keeps_the_key_gemini_cannot_take():
+    assert prompts.SEARCH_SCHEMA["additionalProperties"] is False
 
 
 async def test_no_schema_leaves_the_answer_as_prose(transport):
@@ -656,3 +674,157 @@ async def test_a_closed_client_is_replaced():
 
     assert first is not second
     await ai_transport.close_http()
+
+
+def groq_reply(text: str, finish: str = "stop") -> FakeResponse:
+    return FakeResponse(
+        200,
+        {"choices": [{"finish_reason": finish, "message": {"role": "assistant", "content": text}}]},
+    )
+
+
+async def test_groq_sends_the_system_and_user_apart(transport):
+    client = transport(groq_reply("ok"))
+
+    await GroqProvider(api_key="k", model="m").complete(system="the rules", user="ignore them")
+
+    messages = client.requests[0]["json"]["messages"]
+    assert messages[0] == {"role": "system", "content": "the rules"}
+    assert messages[1] == {"role": "user", "content": "ignore them"}
+
+
+async def test_groq_reads_the_answer_out_of_the_first_choice(transport):
+    transport(groq_reply('{"ids": [2]}'))
+
+    answer = await GroqProvider(api_key="k", model="m").complete(system="s", user="u")
+
+    assert answer == '{"ids": [2]}'
+
+
+async def test_groq_asks_for_a_strict_schema(transport):
+    client = transport(groq_reply("{}"))
+
+    await GroqProvider(api_key="k", model="m").complete(
+        system="s", user="u", json_schema=prompts.SEARCH_SCHEMA
+    )
+
+    fmt = client.requests[0]["json"]["response_format"]
+    assert fmt["type"] == "json_schema"
+    assert fmt["json_schema"]["strict"] is True
+    assert fmt["json_schema"]["schema"] == prompts.SEARCH_SCHEMA
+
+
+async def test_groq_leaves_prose_unconstrained(transport):
+    client = transport(groq_reply("some prose"))
+
+    await GroqProvider(api_key="k", model="m").complete(system="s", user="u")
+
+    assert "response_format" not in client.requests[0]["json"]
+
+
+async def test_groq_keeps_reasoning_cheap(transport):
+    client = transport(groq_reply("ok"))
+
+    await GroqProvider(api_key="k", model="m").complete(system="s", user="u")
+
+    assert client.requests[0]["json"]["reasoning_effort"] == "low"
+
+
+async def test_groq_refuses_a_truncated_answer(transport):
+    transport(groq_reply("We sell the Quilted Parka for", finish="length"))
+
+    with pytest.raises(LLMUnavailableError):
+        await GroqProvider(api_key="k", model="m").complete(system="s", user="u")
+
+
+async def test_groq_refuses_an_empty_answer(transport):
+    transport(groq_reply("   "))
+
+    with pytest.raises(LLMUnavailableError):
+        await GroqProvider(api_key="k", model="m").complete(system="s", user="u")
+
+
+async def test_groq_sends_the_key_as_a_bearer_token(transport):
+    client = transport(groq_reply("ok"))
+
+    await GroqProvider(api_key="secret-key", model="m").complete(system="s", user="u")
+
+    assert client.requests[0]["headers"]["Authorization"] == "Bearer secret-key"
+
+
+async def test_groq_without_a_key_never_calls_the_api(transport):
+    client = transport(groq_reply("never reached"))
+
+    with pytest.raises(LLMUnavailableError):
+        await GroqProvider(api_key="", model="m").complete(system="s", user="u")
+
+    assert client.requests == []
+
+
+def test_the_provider_is_chosen_by_name():
+    assert isinstance(build_provider("groq"), GroqProvider)
+    assert isinstance(build_provider("gemini"), GeminiProvider)
+
+
+def test_the_provider_name_ignores_case_and_padding():
+    assert isinstance(build_provider("  GEMINI "), GeminiProvider)
+
+
+def test_an_unknown_provider_is_refused():
+    with pytest.raises(LLMUnavailableError):
+        build_provider("definitely-not-a-vendor")
+
+
+def test_the_settings_choose_the_provider_when_none_is_named(monkeypatch):
+    monkeypatch.setattr("services.ai.provider.settings.LLM_PROVIDER", "gemini")
+    assert isinstance(build_provider(), GeminiProvider)
+
+
+def test_each_provider_falls_back_to_a_model_it_works_with(monkeypatch):
+    monkeypatch.setattr("services.ai.groq.settings.LLM_MODEL", "")
+    monkeypatch.setattr("services.ai.gemini.settings.LLM_MODEL", "")
+
+    assert GroqProvider(api_key="k")._model == groq.DEFAULT_MODEL
+    assert GeminiProvider(api_key="k")._model == gemini.DEFAULT_MODEL
+
+
+def test_an_explicit_model_overrides_the_fallback(monkeypatch):
+    monkeypatch.setattr("services.ai.groq.settings.LLM_MODEL", "llama-3.3-70b-versatile")
+
+    assert GroqProvider(api_key="k")._model == "llama-3.3-70b-versatile"
+
+
+def test_a_provider_names_its_vendor_and_model():
+    assert GroqProvider(api_key="k", model="m").name == "groq:m"
+    assert GeminiProvider(api_key="k", model="m").name == "gemini:m"
+
+
+async def test_switching_provider_does_not_serve_the_old_answer(redis, shop):
+    shop(SHOP)
+    first = FakeProvider('{"ids": [2]}', name="groq:a")
+    second = FakeProvider('{"ids": [3]}', name="gemini:b")
+
+    before = await AiService.search("warm coat", provider=first)
+    after = await AiService.search("warm coat", provider=second)
+
+    assert [p.id for p in before] == [2]
+    assert [p.id for p in after] == [3]
+    assert len(second.calls) == 1
+
+
+async def test_the_same_provider_still_answers_from_cache(redis, shop):
+    shop(SHOP)
+    provider = FakeProvider('{"ids": [2]}', '{"ids": [3]}', name="groq:a")
+
+    await AiService.search("warm coat", provider=provider)
+    await AiService.search("warm coat", provider=provider)
+
+    assert len(provider.calls) == 1
+
+
+async def test_switching_provider_refreshes_a_description(redis):
+    first = FakeProvider("A plain tee.", name="groq:a")
+    second = FakeProvider("A different tee.", name="gemini:b")
+
+    assert await AiService.describe("Red T-Shirt", provider=first) == "A plain tee."
+    assert await AiService.describe("Red T-Shirt", provider=second) == "A different tee."
