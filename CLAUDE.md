@@ -46,7 +46,7 @@ flowchart LR
 
     subgraph External
         STRIPE[Stripe]
-        GEMINI[Gemini]
+        LLM[Groq or Gemini]
     end
 
     UI -- HTTPS --> API
@@ -56,7 +56,7 @@ flowchart LR
     API -- queues mail --> MQ --> WORKER --> PG
     API -- PaymentIntent --> STRIPE
     STRIPE -- webhook, retried --> API
-    API -- search, recommendations, chat, descriptions --> GEMINI
+    API -- search, recommendations, chat, descriptions --> LLM
 ```
 
 Redis is a cache and nothing else: it is not the broker and holds no task results.
@@ -208,23 +208,37 @@ retries and a send timeout. Dispatched with `.delay()` from `auth_service` and `
 **WebSocket** - `WS /ws/admin?token={jwt}`, superadmin only. `ConnectionManager` broadcasts a
 line to every connected admin when an order is checked out.
 
-**Gemini** - four endpoints under `/ai`, all rate limited and client-only. `services/ai/` is
-split on purpose: `provider.py` is the `LLMProvider` Protocol the services depend on,
-`gemini.py` is the only file that knows the vendor, `prompts.py` holds every instruction,
-`ai_service.py` holds the logic. Swapping vendors means one new class; testing means passing
-a fake `provider=`.
+**LLM** - four endpoints under `/ai`, all rate limited and client-only. The vendor is a
+setting, not a rewrite: `LLM_PROVIDER` picks one of `groq` (default) or `gemini`.
+
+`services/ai/` is split so only one file per vendor knows the vendor:
+
+| File | Holds |
+|---|---|
+| `provider.py` | the `LLMProvider` Protocol every service depends on, and `build_provider()` |
+| `transport.py` | the shared client, retries, timeouts - identical whoever we call |
+| `groq.py` / `gemini.py` | one payload shape and one response shape each |
+| `prompts.py` | every instruction, and the search schema |
+| `ai_service.py` | the logic, which never imports a vendor |
+
+Adding a vendor is one class with `complete()` plus a line in `PROVIDERS`. Testing is passing
+`provider=` a fake.
 
 | Decision | Why |
 |---|---|
-| REST, not the vendor SDK | `httpx` is already a dependency, the timeout is ours, the payload stays readable. |
-| One `httpx.AsyncClient` per process, closed in the app `lifespan` | A client per call discards the connection pool, so every request repeats the TCP and TLS handshake to Google. Measured: 6.1s cold, 1.5s on the reused connection. |
+| `LLM_MODEL` is empty by default | Model names are per-vendor, so each provider falls back to one it is known to work with. Set it only to override, and it must then match the provider - a Gemini model name with `LLM_PROVIDER=groq` is rejected by Groq. |
+| Groq default is `openai/gpt-oss-120b` | It is on the free plan and honours a JSON schema with strict decoding, which `/ai/search` depends on. Models without that can only promise valid JSON, not JSON of the right shape. Its free allowance is also far larger than Gemini's, which is 20 requests a day. |
+| The schema in `prompts` is ordinary JSON Schema | The vendors disagree about it: Groq's strict mode requires `additionalProperties: false`, and Gemini answers 400 over that same key. `_to_gemini_schema()` upper-cases the type names and drops the keys Gemini rejects, so the shared schema stays vendor-neutral and the adapting happens in the vendor file. |
+| REST, not the vendor SDKs | `httpx` is already a dependency, the timeout is ours, the payload stays readable, and two vendors cost no extra packages. |
+| One `httpx.AsyncClient` per process, closed in the app `lifespan` | A client per call discards the connection pool, so every request repeats the TCP and TLS handshake. Measured: 6.1s cold, 1.5s on the reused connection. |
+| Reasoning is switched off on both | These tasks are grounded - pick ids from a catalogue we supplied, or write two sentences from data we supplied. gemini-3.5-flash spent ~490 of a 512 token budget thinking and had nothing left to answer with: search came back as JSON cut mid-array, chat as a sentence cut in half. Off: 1.7s instead of 3.6s. |
+| A truncated answer is refused, not returned | `MAX_TOKENS` on Gemini, `length` on Groq. A half sentence reads as an answer, so it is worse than an error. |
 | 429 is **not** retried | A quota window resets in tens of seconds. Retrying inside the request burns the rest of the quota three times faster and still makes the caller wait. 408 and 5xx are retried, three attempts, backoff 0.5s then 1s. |
-| `/ai/search` returns products, not prose | The model picks ids against a schema (`responseSchema`), and only ids present in the catalogue survive, so a hallucinated id cannot reach a shopper. |
+| `/ai/search` returns products, not prose | The model picks ids against the schema, and only ids present in the catalogue survive, so one it invents cannot reach a shopper. |
 | Search answers are parsed **before** they are cached | Caching the raw reply meant one malformed answer served the same error for the whole hour of its TTL. |
 | AI cache keys carry `cache.version("product")` | The `ai` namespace is not bumped by a product write, so without the stamp a new arrival stayed invisible to search for an hour. |
 | Prompts build from `get_catalogue()` rows, not ORM products | Nothing there is returned to a client. Full products plus their categories cost a second query and 100 identity-map entries for text thrown away after the request. `search` is the exception - it returns the products themselves. |
 | `purchased_product_names()` is one `DISTINCT` query | Walking client -> orders -> order_products -> product loaded the whole purchase history to produce a handful of names, and grew with every order ever placed. Chat and recommendations are 2 queries each; they were 5. |
-
 
 ## Business rules worth knowing
 

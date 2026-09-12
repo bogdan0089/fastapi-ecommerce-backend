@@ -9,7 +9,7 @@
 ![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?logo=stripe&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonaws&logoColor=white)
 
-Production-ready async REST API for a full-featured e-commerce platform. Built with FastAPI and PostgreSQL, it covers the complete shopping flow — from browsing and cart management to checkout, payments, and order tracking — with JWT auth, RBAC, Redis caching, Celery async tasks, Stripe payments, real-time WebSocket notifications, and AI-powered features via Google Gemini.
+Production-ready async REST API for a full-featured e-commerce platform. Built with FastAPI and PostgreSQL, it covers the complete shopping flow — from browsing and cart management to checkout, payments, and order tracking — with JWT auth, RBAC, Redis caching, Celery async tasks, Stripe payments, real-time WebSocket notifications, and AI-powered features via Groq or Google Gemini, chosen by a setting.
 
 **Live demo:** https://bohdan-shop.duckdns.org  
 **Swagger UI:** https://bohdan-shop.duckdns.org/docs  
@@ -30,7 +30,7 @@ Production-ready async REST API for a full-featured e-commerce platform. Built w
 | PyJWT + bcrypt / passlib | Authentication + password hashing |
 | Stripe | Payment processing |
 | WebSocket | Real-time admin notifications |
-| Google Gemini | AI search, recommendations, chat, product descriptions |
+| Groq or Google Gemini | AI search, recommendations, chat, product descriptions; `LLM_PROVIDER` picks one |
 | Docker + Docker Compose | Containerization |
 | GitHub Actions | CI/CD — automated testing and deployment to AWS EC2 |
 
@@ -87,7 +87,7 @@ Router → Service → UnitOfWork → Repository → DB
 - **Pessimistic Locking** — `SELECT ... FOR UPDATE` on all balance-changing operations to prevent race conditions
 - **Order State Machine** — enforced transitions (`pending → completed / cancelled`, `completed → cancelled` only)
 - **Rate Limiting** — Redis-based per-IP counter on login and forgot-password endpoints; max 5 requests / 60s, returns HTTP 429
-- **AI Integration** — Google Gemini powers 4 features: semantic product search that returns the matching products themselves, personalized recommendations from purchase history, a store assistant chatbot, and AI-generated product descriptions for admins
+- **AI Integration** — Groq (default) or Google Gemini, swapped with one setting, powers 4 features: semantic product search that returns the matching products themselves, personalized recommendations from purchase history, a store assistant chatbot, and AI-generated product descriptions for admins
 - **Structured Logging** — `utils/logger.py` with `get_logger` utility outputs timestamped logs to stdout; all services log key business events at `INFO` level, not-found cases at `WARNING`; plain reads are intentionally skipped to keep logs clean
 - **CI/CD** — GitHub Actions runs ruff, migration checks and 104 integration tests on every push and PR; on merge to `main` automatically deploys to AWS EC2 via SSH
 
