@@ -1,22 +1,13 @@
-import asyncio
 from typing import Any
-
-import httpx
 
 from core.config import settings
 from core.exceptions import LLMUnavailableError
+from services.ai.transport import post_json
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-
-# 429 is deliberately absent: a quota window resets in tens of seconds, so
-# retrying inside a request only burns the remaining quota three times faster
-# and still makes the caller wait. Fail fast and let them try again.
-RETRY_ON = {408, 500, 502, 503, 504}
-MAX_ATTEMPTS = 3
-QUOTA_EXHAUSTED = 429
 
 # Thinking is switched off. Every task here is grounded - pick ids out of a
 # catalogue we handed the model, or write two sentences from data we handed it -
@@ -26,29 +17,6 @@ QUOTA_EXHAUSTED = 429
 # half. Measured with it off: 1.3s instead of 3.6s, and complete answers.
 THINKING_BUDGET = 0
 TRUNCATED = "MAX_TOKENS"
-
-_client: httpx.AsyncClient | None = None
-
-
-def _http() -> httpx.AsyncClient:
-    """One client for the whole process.
-
-    A client per call throws away the connection pool, so every AI request pays
-    for a fresh TCP connection and TLS handshake to Google. The timeout is
-    passed per request instead, because each caller may set its own.
-    """
-    global _client
-    if _client is None or _client.is_closed:
-        _client = httpx.AsyncClient()
-    return _client
-
-
-async def close_http() -> None:
-    """Release the shared client. Called once, when the app shuts down."""
-    global _client
-    if _client is not None and not _client.is_closed:
-        await _client.aclose()
-    _client = None
 
 
 class GeminiProvider:
@@ -124,55 +92,10 @@ class GeminiProvider:
             logger.error("llm_key_missing")
             raise LLMUnavailableError()
 
-        url = f"{BASE_URL}/{self._model}:generateContent"
-        payload = self._payload(system, user, json_schema)
-
-        client = _http()
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            try:
-                response = await client.post(
-                    url,
-                    json=payload,
-                    headers={"x-goog-api-key": self._api_key},
-                    timeout=self._timeout,
-                )
-            except (httpx.TimeoutException, httpx.TransportError) as exc:
-                logger.warning(
-                    "llm_transport_error",
-                    extra={"extra_fields": {"attempt": attempt, "error": str(exc)}},
-                )
-                if attempt == MAX_ATTEMPTS:
-                    raise LLMUnavailableError() from exc
-                await asyncio.sleep(0.5 * attempt)
-                continue
-
-            if response.status_code in RETRY_ON and attempt < MAX_ATTEMPTS:
-                logger.warning(
-                    "llm_retrying",
-                    extra={"extra_fields": {"attempt": attempt, "status": response.status_code}},
-                )
-                await asyncio.sleep(0.5 * attempt)
-                continue
-
-            if response.status_code == QUOTA_EXHAUSTED:
-                logger.warning(
-                    "llm_quota_exhausted",
-                    extra={"extra_fields": {"model": self._model, "body": response.text[:200]}},
-                )
-                raise LLMUnavailableError()
-
-            if response.status_code >= 400:
-                logger.error(
-                    "llm_request_failed",
-                    extra={
-                        "extra_fields": {
-                            "status": response.status_code,
-                            "body": response.text[:300],
-                        }
-                    },
-                )
-                raise LLMUnavailableError()
-
-            return self._read_text(response.json())
-
-        raise LLMUnavailableError()
+        body = await post_json(
+            f"{BASE_URL}/{self._model}:generateContent",
+            self._payload(system, user, json_schema),
+            {"x-goog-api-key": self._api_key},
+            self._timeout,
+        )
+        return self._read_text(body)

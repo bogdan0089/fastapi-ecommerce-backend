@@ -5,7 +5,8 @@ import pytest
 
 from core.exceptions import LLMUnavailableError
 from models.models import Product
-from services.ai import gemini, prompts
+from services.ai import prompts
+from services.ai import transport as ai_transport
 from services.ai.ai_service import AiService
 from services.ai.gemini import GeminiProvider
 from utils import cache
@@ -440,12 +441,12 @@ def transport(monkeypatch):
 
     def install(*answers) -> FakeClient:
         client = FakeClient(*answers)
-        monkeypatch.setattr(gemini, "_http", lambda: client)
+        monkeypatch.setattr(ai_transport, "_http", lambda: client)
 
         async def no_wait(_seconds):
             return None
 
-        monkeypatch.setattr(gemini, "asyncio", types.SimpleNamespace(sleep=no_wait))
+        monkeypatch.setattr(ai_transport, "asyncio", types.SimpleNamespace(sleep=no_wait))
         return client
 
     return install
@@ -619,20 +620,20 @@ async def test_the_timeout_travels_with_the_request(transport):
 
 
 async def test_the_http_client_is_reused_between_calls():
-    gemini._client = None
-    first = gemini._http()
-    second = gemini._http()
+    ai_transport._client = None
+    first = ai_transport._http()
+    second = ai_transport._http()
 
     assert first is second
-    await gemini.close_http()
-    assert gemini._client is None
+    await ai_transport.close_http()
+    assert ai_transport._client is None
 
 
 async def test_a_closed_client_is_replaced():
-    gemini._client = None
-    first = gemini._http()
-    await gemini.close_http()
-    second = gemini._http()
+    ai_transport._client = None
+    first = ai_transport._http()
+    await ai_transport.close_http()
+    second = ai_transport._http()
 
     assert first is not second
-    await gemini.close_http()
+    await ai_transport.close_http()
