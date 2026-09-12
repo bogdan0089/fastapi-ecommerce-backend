@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
+    # Which vendor answers the /ai endpoints. Only gemini is wired up so far.
+    LLM_PROVIDER: str = "gemini"
     GEMINI_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
     LLM_MODEL: str = "gemini-3.5-flash"
     LLM_TIMEOUT_SECONDS: float = 20.0
     LLM_MAX_OUTPUT_TOKENS: int = 512
