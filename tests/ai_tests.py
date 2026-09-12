@@ -403,6 +403,37 @@ def reply(text: str) -> FakeResponse:
     return FakeResponse(200, {"candidates": [{"content": {"parts": [{"text": text}]}}]})
 
 
+def truncated(text: str = '{"ids": [') -> FakeResponse:
+    """What the API returns when the token budget ran out mid-answer."""
+    return FakeResponse(
+        200,
+        {
+            "candidates": [
+                {"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": text}]}}
+            ],
+            "usageMetadata": {"thoughtsTokenCount": 489, "candidatesTokenCount": 7},
+        },
+    )
+
+
+def reply_with_thinking(thought: str, answer: str) -> FakeResponse:
+    return FakeResponse(
+        200,
+        {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {"text": thought, "thought": True},
+                            {"text": answer},
+                        ]
+                    }
+                }
+            ]
+        },
+    )
+
+
 @pytest.fixture
 def transport(monkeypatch):
     """Swap the HTTP client out and make the retry backoff instant."""
@@ -537,6 +568,46 @@ async def test_no_schema_leaves_the_answer_as_prose(transport):
     await GeminiProvider(api_key="k", model="m").complete(system="s", user="u")
 
     assert "responseMimeType" not in client.requests[0]["json"]["generationConfig"]
+
+
+async def test_thinking_is_switched_off(transport):
+    client = transport(reply("ok"))
+
+    await GeminiProvider(api_key="k", model="m").complete(system="s", user="u")
+
+    generation = client.requests[0]["json"]["generationConfig"]
+    assert generation["thinkingConfig"] == {"thinkingBudget": 0}
+
+
+async def test_a_truncated_answer_is_refused(transport):
+    transport(truncated())
+
+    with pytest.raises(LLMUnavailableError):
+        await GeminiProvider(api_key="k", model="m").complete(system="s", user="u")
+
+
+async def test_a_truncated_answer_is_refused_even_when_it_reads_fine(transport):
+    transport(truncated("We sell the Quilted Parka for $240,"))
+
+    with pytest.raises(LLMUnavailableError):
+        await GeminiProvider(api_key="k", model="m").complete(system="s", user="u")
+
+
+async def test_a_truncated_answer_is_not_retried(transport):
+    client = transport(truncated())
+
+    with pytest.raises(LLMUnavailableError):
+        await GeminiProvider(api_key="k", model="m").complete(system="s", user="u")
+
+    assert len(client.requests) == 1
+
+
+async def test_reasoning_is_kept_out_of_the_answer(transport):
+    transport(reply_with_thinking("The shopper wants something warm, so", '{"ids": [2]}'))
+
+    answer = await GeminiProvider(api_key="k", model="m").complete(system="s", user="u")
+
+    assert answer == '{"ids": [2]}'
 
 
 async def test_the_timeout_travels_with_the_request(transport):
