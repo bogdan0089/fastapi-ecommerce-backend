@@ -18,6 +18,15 @@ RETRY_ON = {408, 500, 502, 503, 504}
 MAX_ATTEMPTS = 3
 QUOTA_EXHAUSTED = 429
 
+# Thinking is switched off. Every task here is grounded - pick ids out of a
+# catalogue we handed the model, or write two sentences from data we handed it -
+# so reasoning adds nothing to the answer. It costs plenty: gemini-3.5-flash
+# spent ~490 of a 512 token budget thinking and then had nothing left to answer
+# with, so search returned JSON cut off mid-array and chat a sentence cut in
+# half. Measured with it off: 1.3s instead of 3.6s, and complete answers.
+THINKING_BUDGET = 0
+TRUNCATED = "MAX_TOKENS"
+
 _client: httpx.AsyncClient | None = None
 
 
@@ -65,6 +74,7 @@ class GeminiProvider:
         generation: dict[str, Any] = {
             "maxOutputTokens": self._max_output_tokens,
             "temperature": 0.4,
+            "thinkingConfig": {"thinkingBudget": THINKING_BUDGET},
         }
         if json_schema is not None:
             generation["responseMimeType"] = "application/json"
@@ -79,10 +89,27 @@ class GeminiProvider:
     def _read_text(body: dict[str, Any]) -> str:
         candidates = body.get("candidates") or []
         if not candidates:
+            logger.error("llm_no_candidates")
             raise LLMUnavailableError()
-        parts = candidates[0].get("content", {}).get("parts") or []
-        text = "".join(part.get("text", "") for part in parts).strip()
+
+        candidate = candidates[0]
+
+        # A truncated answer is worse than none: prose arrives cut mid-sentence
+        # and JSON arrives unparsable, which reads as a mangled reply rather than
+        # a failure. Refuse it here so the cause is named in the log.
+        if candidate.get("finishReason") == TRUNCATED:
+            logger.error(
+                "llm_answer_truncated",
+                extra={"extra_fields": {"usage": body.get("usageMetadata", {})}},
+            )
+            raise LLMUnavailableError()
+
+        # A thinking part carries reasoning, not the answer. Joining it in would
+        # corrupt a JSON reply and pad a prose one.
+        parts = candidate.get("content", {}).get("parts") or []
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
         if not text:
+            logger.error("llm_empty_answer")
             raise LLMUnavailableError()
         return text
 
