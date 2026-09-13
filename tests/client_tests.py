@@ -1,7 +1,9 @@
 import uuid
+
 import pytest
 from pydantic import ValidationError
-from schemas.client.input_dto import ClientCreateDTO, ClientUpdateDTO, ClientBalanceOperationDTO
+
+from schemas.client.input_dto import ClientBalanceOperationDTO, ClientCreateDTO, ClientUpdateDTO
 
 
 def test_register(client):
@@ -135,3 +137,57 @@ def test_change_password_wrong_old(client, auth_headers):
         "new_password": "mikle123"
     })
     assert response.status_code == 401
+
+
+def test_change_password_rejects_short_new(client, auth_headers, new_client):
+    """The minimum applies when changing a password, not only when registering."""
+    response = client.post("/auth/change_password", headers=auth_headers, json={
+        "old_password": new_client["password"],
+        "new_password": "short1"
+    })
+    assert response.status_code == 422
+
+
+def test_reset_password_rejects_short_new(client):
+    """Same minimum on the reset path, before the token is even looked at."""
+    response = client.post("/auth/reset_password", json={
+        "reset_token": "irrelevant",
+        "new_password": "short1"
+    })
+    assert response.status_code == 422
+
+
+def test_demo_top_up_credits_own_balance(client, auth_headers):
+    """Deliberate: reviewers need a balance without a real card. See README."""
+    before = client.get("/client/me", headers=auth_headers).json()
+
+    response = client.post(
+        f"/client/{before['id']}/deposit",
+        headers=auth_headers,
+        json={"amount": 50},
+    )
+    assert response.status_code == 200
+
+    after = client.get("/client/me", headers=auth_headers).json()
+    assert float(after["balance"]) == float(before["balance"]) + 50
+
+
+def test_top_up_of_another_client_is_rejected(client, auth_headers):
+    mine = client.get("/client/me", headers=auth_headers).json()
+
+    response = client.post(
+        f"/client/{mine['id'] + 1000}/deposit",
+        headers=auth_headers,
+        json={"amount": 50},
+    )
+    assert response.status_code in (403, 404)
+
+
+def test_register_rejects_short_password(client):
+    response = client.post("/auth/register", json={
+        "name": "Short Pass",
+        "email": "short.pass@example.com",
+        "password": "short1",
+        "age": 25
+    })
+    assert response.status_code == 422

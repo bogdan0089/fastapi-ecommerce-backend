@@ -2,11 +2,23 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Ruff
+        run: ruff check .
+
   test:
     runs-on: ubuntu-latest
     env:
@@ -18,7 +30,6 @@ jobs:
       SECRET_KEY: test-secret-key
       REDIS_URL: redis://localhost:6379
       RABBITMQ_URL: amqp://guest:guest@localhost:5672/
-
 
     services:
       postgres:
@@ -44,18 +55,39 @@ jobs:
           - 5672:5672
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+          cache: pip
+      - run: pip install -r requirements-dev.txt
 
-      - name: Run migrations
+      - name: Migrations
         run: alembic upgrade head
 
-      - name: Run tests
-        run: pytest tests/ -v
+      - name: Models match migrations
+        run: alembic check
 
+      - name: Migration round trip
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+
+      - name: Tests
+        run: pytest -q
+
+  deploy:
+    needs: [lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/fastapi-ecommerce-backend
+            git pull origin main
+            docker compose up --build -d

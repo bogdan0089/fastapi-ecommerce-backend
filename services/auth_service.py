@@ -1,30 +1,32 @@
-from datetime import datetime, timedelta, timezone
+import uuid
+from datetime import UTC, datetime, timedelta
+
 import jwt
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordRequestForm
+from kombu.exceptions import OperationalError
+
+from celery_app import send_reset_password_email, send_verification_email
 from core.config import settings
 from core.exceptions import (
     ClientAlreadyError,
     ClientNotFoundError,
+    EmailNotVerifiedError,
+    EmailQueueError,
     TokenExpiredError,
     TokenInvalidError,
     VerifyPasswordError,
-    EmailNotVerifiedError
 )
+from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Client
 from schemas.auth.input_dto import ChangePasswordDTO, ChangeRoleDTO, ForgotPasswordDTO, ResetPasswordDTO
 from schemas.auth.output_dto import TokenOutputDTO
 from schemas.client.input_dto import ClientCreateDTO
 from utils.hash import hash_password, verify_password
-import uuid
-from core.redis import redis_client
-from celery_app import send_verification_email, send_reset_password_email
 from utils.logger import get_logger
 
-
 logger = get_logger(__name__)
-
 
 class AuthService:
 
@@ -32,7 +34,7 @@ class AuthService:
     def create_access_token(user_id: int) -> str:
         payload = {
             "sub": str(user_id),
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            "exp": datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         }
         return jwt.encode(payload, settings.SECRET_KEY, settings.ALGORITHM)
 
@@ -40,7 +42,7 @@ class AuthService:
     def create_refresh_token(client_id: int) -> str:
         payload = {
             "sub": str(client_id),
-            "exp": datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            "exp": datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         }
         return jwt.encode(payload, settings.SECRET_KEY, settings.ALGORITHM)
 
@@ -52,10 +54,10 @@ class AuthService:
             if user_id is None:
                 raise ClientNotFoundError()
             return int(user_id)
-        except jwt.ExpiredSignatureError:
-            raise TokenExpiredError()
-        except jwt.InvalidTokenError:
-            raise TokenInvalidError()
+        except jwt.ExpiredSignatureError as exc:
+            raise TokenExpiredError() from exc
+        except jwt.InvalidTokenError as exc:
+            raise TokenInvalidError() from exc
 
     @staticmethod
     def refresh_token(token: str) -> str:
@@ -63,7 +65,21 @@ class AuthService:
         return AuthService.create_access_token(client_id)
 
     @staticmethod
-    async def register_client(data: ClientCreateDTO) -> Client:
+    async def _queue_verification_email(client_id: int, email: str) -> bool:
+        token = str(uuid.uuid4())
+        await redis_client.set(f"verify:{token}", client_id, ex=86400)
+        try:
+            send_verification_email.delay(email, token)
+        except OperationalError:
+            logger.error(
+                "verification_email_not_queued",
+                extra={"extra_fields": {"client_id": client_id, "email": email}},
+            )
+            return False
+        return True
+
+    @staticmethod
+    async def register_client(data: ClientCreateDTO) -> dict[str, str]:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client_email(data.email)
             if client:
@@ -73,13 +89,28 @@ class AuthService:
                 data,
                 hashed
             )
-            token = str(uuid.uuid4())
-            await redis_client.set(f"verify:{token}", client.id, ex=86400)
-        send_verification_email.delay(client.email, token)
+        queued = await AuthService._queue_verification_email(client.id, client.email)
         logger.info("client_registered", extra={"extra_fields": {"client_id": client.id, "email": data.email}})
+        if queued:
+            return {"message": "Registration successful. Check your email to verify account."}
         return {
-            "message": "Registration successful. Check your email to verify account."
+            "message": "Registration successful, but the verification email could not be sent. "
+                       "Use resend verification to try again."
         }
+
+    @staticmethod
+    async def resend_verification(data: ForgotPasswordDTO) -> dict[str, str]:
+        async with UnitOfWork() as uow:
+            client = await uow.client.get_client_email(data.email)
+            if not client:
+                raise ClientNotFoundError(email=data.email)
+            if client.is_verified:
+                return {"message": "This email is already verified. You can log in."}
+            client_id, email = client.id, client.email
+        queued = await AuthService._queue_verification_email(client_id, email)
+        if queued:
+            return {"message": "Verification email sent. Check your inbox."}
+        raise EmailQueueError()
 
     @staticmethod
     async def client_login(data: OAuth2PasswordRequestForm = Depends()) -> TokenOutputDTO:
@@ -89,7 +120,8 @@ class AuthService:
                 logger.warning("login_failed_not_found", extra={"extra_fields": {"email": data.username}})
                 raise ClientNotFoundError(email=data.username)
             if not client.is_verified:
-                raise EmailNotVerifiedError(client.id)
+                logger.warning("login_blocked_not_verified", extra={"extra_fields": {"client_id": client.id}})
+                raise EmailNotVerifiedError()
             if not verify_password(data.password, client.hashed_password):
                 logger.warning("login_failed_wrong_password", extra={"extra_fields": {"client_id": client.id}})
                 raise VerifyPasswordError()
@@ -103,7 +135,7 @@ class AuthService:
                 client_id=client.id,
                 email=client.email,
                 age=client.age,
-                name=client.name,
+                name=client.name
             )
 
     @staticmethod
@@ -131,7 +163,7 @@ class AuthService:
 
     @staticmethod
     async def verify_email(token: str) -> dict:
-        raw = await redis_client.get((f"verify:{token}"))
+        raw = await redis_client.get(f"verify:{token}")
         if not raw:
             raise TokenInvalidError()
         client_id = int(raw)

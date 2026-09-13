@@ -1,13 +1,13 @@
-from logging.config import fileConfig
-from sqlalchemy import create_engine
-from sqlalchemy import pool
-from alembic import context
 import sys
-from pathlib import Path 
-from database.database import Base
-from core.config import settings
-import models.models
+from logging.config import fileConfig
+from pathlib import Path
 
+from sqlalchemy import create_engine, pool
+
+import models.models  # noqa: F401
+from alembic import context
+from core.config import settings
+from database.database import Base
 
 sys.path.append(str(Path(__file__).parent.parent))
 target_metadata = Base.metadata

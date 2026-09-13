@@ -7,7 +7,6 @@ from database.unit_of_work import UnitOfWork
 from models.models import Client, Transaction
 from utils.logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -25,7 +24,9 @@ class TransactionService:
             return transaction
 
     @staticmethod
-    async def client_all_transactions(client_id: int, current_client: Client, limit: int = 10, offset: int = 0) -> list[Transaction]:
+    async def client_all_transactions(
+        client_id: int, current_client: Client, limit: int = 10, offset: int = 0
+    ) -> list[Transaction]:
         async with UnitOfWork() as uow:
             client = await uow.client.get_client(client_id)
             if client is None:

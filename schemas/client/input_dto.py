@@ -1,19 +1,16 @@
-from pydantic import BaseModel, Field, EmailStr, field_validator
-from typing import Optional
+
+from decimal import Decimal
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from core.validators import Password
 
 
 class ClientCreateDTO(BaseModel):
     name: str = Field(..., min_length=1)
     email: EmailStr
-    password: str
+    password: Password
     age: int = Field(..., gt=0)
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, p: str) -> str:
-        if len(p) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        return p
 
     @field_validator("email")
     @classmethod
@@ -24,8 +21,8 @@ class ClientCreateDTO(BaseModel):
 class ClientUpdateDTO(BaseModel):
     name: str = Field(..., min_length=1)
     age: int = Field(..., gt=0)
-    address: Optional[str] = None
+    address: str | None = None
 
 
 class ClientBalanceOperationDTO(BaseModel):
-    amount: float = Field(..., gt=0)
+    amount: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)

@@ -1,24 +1,14 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from core.config import settings
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
+from core.config import settings
 
 async_engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
 
-async_session_maker = sessionmaker(class_=AsyncSession, bind=async_engine, expire_on_commit=False)
+async_session_maker = async_sessionmaker(
+    async_engine, class_=AsyncSession, expire_on_commit=False
+)
+
 
 class Base(DeclarativeBase):
     pass
-
-async def get_session():
-    async with async_session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-
-
-
-

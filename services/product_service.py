@@ -1,13 +1,14 @@
+﻿from pydantic import TypeAdapter
+
+from core.enum import ProductStatus
 from core.exceptions import ProductNotFound
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
 from models.models import Product
 from schemas.product.input_dto import ProductCreateDTO, ProductUpdateDTO
-from schemas.product.output_dto import ProductOutputDTO
-from core.enum import ProductStatus
-from pydantic import TypeAdapter
+from schemas.product.output_dto import ProductOutputDTO, ProductPageDTO
+from utils import cache
 from utils.logger import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -19,8 +20,7 @@ class ProductService:
     async def create_product(data: ProductCreateDTO) -> Product:
         async with UnitOfWork() as uow:
             product = await uow.product.create_product(data)
-        async for key in redis_client.scan_iter("product*"):
-            await redis_client.unlink(key)
+        await cache.invalidate("product")
         logger.info("product_created", extra={"extra_fields": {"product_id": product.id}})
         return product
 
@@ -36,7 +36,7 @@ class ProductService:
     @staticmethod
     async def get_products(limit, offset) -> list[ProductOutputDTO]:
         async with UnitOfWork() as uow:
-            cached_key = f"products:limit={limit}:offset={offset}"
+            cached_key = await cache.key("product", f"list:limit={limit}:offset={offset}")
             cached = await redis_client.get(cached_key)
             if cached:
                 return _product_list_adapter.validate_json(cached)
@@ -51,9 +51,50 @@ class ProductService:
             return validated
 
     @staticmethod
+    async def browse(
+        name: str | None,
+        category_id: int | None,
+        min_price: float | None,
+        max_price: float | None,
+        limit: int,
+        offset: int,
+    ) -> ProductPageDTO:
+        """One filtered page of the catalogue, with its total and price ceiling."""
+        suffix = (
+            f"browse:name={name or ''}:cat={category_id or ''}"
+            f":min={min_price or ''}:max={max_price or ''}:limit={limit}:offset={offset}"
+        )
+        cached_key = await cache.key("product", suffix)
+        cached = await redis_client.get(cached_key)
+        if cached:
+            return ProductPageDTO.model_validate_json(cached)
+
+        async with UnitOfWork() as uow:
+            products = await uow.product.browse(
+                name=name,
+                category_id=category_id,
+                min_price=min_price,
+                max_price=max_price,
+                limit=limit,
+                offset=offset,
+            )
+            total, ceiling = await uow.product.browse_summary(
+                name=name, category_id=category_id,
+                min_price=min_price, max_price=max_price,
+            )
+
+        page = ProductPageDTO(
+            items=_product_list_adapter.validate_python(products),
+            total=total,
+            price_ceiling=float(ceiling) if ceiling is not None else 0.0,
+        )
+        await redis_client.set(cached_key, page.model_dump_json(), ex=60)
+        return page
+
+    @staticmethod
     async def get_products_any_status(limit: int, offset: int) -> list[ProductOutputDTO]:
         async with UnitOfWork() as uow:
-            cached_key = f"products_admin:limit={limit}:offset={offset}"
+            cached_key = await cache.key("product", f"admin:limit={limit}:offset={offset}")
             cached = await redis_client.get(cached_key)
             if cached:
                 return _product_list_adapter.validate_json(cached)
@@ -74,8 +115,7 @@ class ProductService:
             if not product:
                 raise ProductNotFound(product_id)
             updated = await uow.product.update_product(product, data)
-        async for key in redis_client.scan_iter("product*"):
-            await redis_client.unlink(key)
+        await cache.invalidate("product")
         logger.info("product_updated", extra={"extra_fields": {"product_id": product_id}})
         return updated
 
@@ -86,9 +126,11 @@ class ProductService:
             if not product:
                 raise ProductNotFound(product_id)
             updated = await uow.product.update_product_status(product, status)
-        async for key in redis_client.scan_iter("product*"):
-            await redis_client.unlink(key)
-        logger.info("product_status_updated", extra={"extra_fields": {"product_id": product_id, "status": status.value}})
+        await cache.invalidate("product")
+        logger.info(
+            "product_status_updated",
+            extra={"extra_fields": {"product_id": product_id, "status": status.value}},
+        )
         return updated
 
     @staticmethod
@@ -98,8 +140,7 @@ class ProductService:
             if not product:
                 raise ProductNotFound(product_id)
             deleted = await uow.product.delete_product(product)
-        async for key in redis_client.scan_iter("product*"):
-            await redis_client.unlink(key)
+        await cache.invalidate("product")
         logger.info("product_deleted", extra={"extra_fields": {"product_id": product_id}})
         return deleted
 
@@ -122,3 +163,4 @@ class ProductService:
         async with UnitOfWork() as uow:
             products = await uow.product.find_by_color(product_color, limit, offset)
             return products or []
+

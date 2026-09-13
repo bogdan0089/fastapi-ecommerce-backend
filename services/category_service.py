@@ -1,12 +1,14 @@
+﻿from pydantic import TypeAdapter
+from sqlalchemy.exc import IntegrityError
+
+from core.exceptions import CategoryAlreadyExistsError, CategoryNotFoundError
+from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
+from models.models import Category
 from schemas.category.input_dto import CategoryCreateDTO
 from schemas.category.output_dto import CategoryOutputDTO
-from models.models import Category
-from core.redis import redis_client
-from pydantic import TypeAdapter
-from core.exceptions import CategoryNotFoundError
+from utils import cache
 from utils.logger import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -16,16 +18,18 @@ class CategoryService:
 
     @staticmethod
     async def create_category(data: CategoryCreateDTO) -> Category:
-        async with UnitOfWork() as uow:
-            category = await uow.category.create_category(data)
-        async for key in redis_client.scan_iter("category*"):
-            await redis_client.unlink(key)
+        try:
+            async with UnitOfWork() as uow:
+                category = await uow.category.create_category(data)
+        except IntegrityError as exc:
+            raise CategoryAlreadyExistsError(data.name) from exc
+        await cache.invalidate("category")
         logger.info("category_created", extra={"extra_fields": {"category_id": category.id, "name": data.name}})
         return category
 
     @staticmethod
     async def get_all_category(limit, offset) -> list[CategoryOutputDTO]:
-        cached_key = f"categories:limit={limit}:offset={offset}"
+        cached_key = await cache.key("category", f"list:limit={limit}:offset={offset}")
         cached = await redis_client.get(cached_key)
         if cached:
             return _category_list_adapter.validate_json(cached)
@@ -48,6 +52,6 @@ class CategoryService:
                 logger.warning("category_not_found", extra={"extra_fields": {"category_id": category_id}})
                 raise CategoryNotFoundError(category_id)
             await uow.category.delete_category(category)
-        async for key in redis_client.scan_iter("category*"):
-            await redis_client.unlink(key)
+        await cache.invalidate("category")
         logger.info("category_deleted", extra={"extra_fields": {"category_id": category_id}})
+

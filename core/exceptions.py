@@ -15,10 +15,6 @@ class OrderNotFoundError(BaseAppException):
             detail = "Order not found."
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
 
-class OrdersNotFound(BaseAppException):
-    def __init__(self) -> None:
-        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="No orders found.")
-
 class ClientNotFoundError(BaseAppException):
     def __init__(self, client_id: int | None = None, email: str | None = None) -> None:
         if client_id is not None:
@@ -149,10 +145,10 @@ class OrderNotCompletedError(BaseAppException):
         )
 
 class EmailNotVerifiedError(BaseAppException):
-    def __init__(self, client_id: int):
+    def __init__(self) -> None:
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Not verify client_id: {client_id}"
+            detail="Your email is not verified yet. Open the link we sent you, or request a new one."
         )
 
 class OrderCannotBeCancelledError(BaseAppException):
@@ -173,7 +169,7 @@ class TooManyRequests(BaseAppException):
     def __init__(self) -> None:
         super().__init__(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Too many requests. Try again later."
+            detail="Too many requests. Try again later."
         )
 
 class OutOfStockError(BaseAppException):
@@ -201,6 +197,44 @@ class ReviewsNotFoundError(BaseAppException):
     def __init__(self):
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Reviews not found."
+            detail="Reviews not found."
         )
 
+
+
+class CategoryAlreadyExistsError(BaseAppException):
+    def __init__(self, name: str):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Category '{name}' already exists."
+        )
+
+
+class ReviewAlreadyExistsError(BaseAppException):
+    def __init__(self, product_id: int):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"You have already reviewed product {product_id}."
+        )
+
+
+class InvalidWebhookSignatureError(BaseAppException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid webhook signature."
+        )
+
+class EmailQueueError(BaseAppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not queue the email right now. Please try again shortly.",
+        )
+
+class LLMUnavailableError(BaseAppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The assistant is unavailable right now. Please try again shortly.",
+        )

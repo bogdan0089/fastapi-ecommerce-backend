@@ -1,8 +1,9 @@
-from fastapi import WebSocket, APIRouter
-from utils.connection_manager import connection
-from services.auth_service import AuthService
-from database.unit_of_work import UnitOfWork
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from core.enum import Role
+from database.unit_of_work import UnitOfWork
+from services.auth_service import AuthService
+from utils.connection_manager import connection
 
 router_websocket = APIRouter()
 
@@ -22,5 +23,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     try:
         while True:
             await websocket.receive_text()
-    except:
+    except WebSocketDisconnect:
+        pass
+    finally:
         connection.disconnect(websocket)

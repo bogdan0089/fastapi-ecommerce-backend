@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://redis:6379"
     RABBITMQ_URL: str = ""
+    RABBITMQ_USER: str = ""
+    RABBITMQ_PASSWORD: str = ""
 
     EMAIL_USER: str = ""
     EMAIL_PASSWORD: str = ""
@@ -26,7 +28,17 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
+    # Which vendor answers the /ai endpoints: "groq" or "gemini".
+    # LLM_MODEL is empty on purpose - each provider then picks a model it is
+    # known to work with. Set it only to override that, and remember it has to
+    # match the provider.
+    LLM_PROVIDER: str = "groq"
     GROQ_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    LLM_MODEL: str = ""
+    LLM_TIMEOUT_SECONDS: float = 20.0
+    LLM_MAX_OUTPUT_TOKENS: int = 512
+    LLM_CACHE_TTL_SECONDS: int = 3600
 
     DEBUG: bool = False
     BASE_URL: str = "http://localhost:8000"

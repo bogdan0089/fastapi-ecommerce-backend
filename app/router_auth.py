@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+
 from schemas.auth.input_dto import (
     ChangePasswordDTO,
-    RefreshRequestDTO,
     ChangeRoleDTO,
-    ResetPasswordDTO,
     ForgotPasswordDTO,
+    RefreshRequestDTO,
+    ResetPasswordDTO,
 )
-from schemas.auth.output_dto import TokenOutputDTO, RefreshOutputDTO
+from schemas.auth.output_dto import RefreshOutputDTO, TokenOutputDTO
 from schemas.client.input_dto import ClientCreateDTO
 from schemas.client.output_dto import ClientOutputDTO
 from services.auth_service import AuthService
-from utils.dependencies import CurrentClient, CurrentAdmin, RateLimit
-
+from utils.dependencies import CurrentAdmin, CurrentClient, RateLimit
 
 router_auth = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -41,6 +41,10 @@ async def change_role(client_id: int, data: ChangeRoleDTO, _: CurrentAdmin):
 @router_auth.get("/verify/{token}")
 async def verify_email(token: str):
     return await AuthService.verify_email(token)
+
+@router_auth.post("/resend_verification")
+async def resend_verification(data: ForgotPasswordDTO, _: RateLimit):
+    return await AuthService.resend_verification(data)
 
 @router_auth.post("/forgot_password")
 async def forgot_password(data: ForgotPasswordDTO, _: RateLimit):

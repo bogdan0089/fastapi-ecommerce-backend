@@ -36,7 +36,7 @@ def downgrade() -> None:
                existing_type=sa.DOUBLE_PRECISION(precision=53),
                nullable=True)
     op.drop_column('products', 'status')
-    op.drop_constraint(None, 'clients', type_='unique')
+    op.drop_constraint('clients_email_key', 'clients', type_='unique')
     op.drop_column('clients', 'role')
     sa.Enum(name='role').drop(op.get_bind(), checkfirst=True)
     sa.Enum(name='productstatus').drop(op.get_bind(), checkfirst=True)

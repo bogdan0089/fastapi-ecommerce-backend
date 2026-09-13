@@ -1,5 +1,8 @@
+import uuid
+
 import pytest
 from pydantic import ValidationError
+
 from core.enum import OrderStatus
 from schemas.order.input_dto import OrderClientCreateDTO, OrderCreateInternalDTO, OrderStatusUpdateDTO
 from tests.conftest import _db_execute
@@ -106,6 +109,35 @@ def test_refund_completed_order(client, auth_headers):
     response = client.post(f"/order/{order_id}/refund", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["message"] == "Order cancelled successfully"
+
+
+def test_refund_uses_the_price_the_client_paid(client, auth_headers):
+    """A price change after checkout must not change what the refund pays back."""
+    me = client.get("/client/me", headers=auth_headers)
+    client_id = me.json()["id"]
+    client.post(f"/client/{client_id}/deposit", headers=auth_headers, json={"amount": 1000})
+
+    name = f"price-change-{uuid.uuid4().hex[:8]}"
+    product = client.post(
+        "/product/",
+        json={"name": name, "price": 50.0, "color": "black", "quantity": 10},
+        headers=auth_headers,
+    )
+    product_id = product.json()["id"]
+    _db_execute("UPDATE products SET status='accept' WHERE id=%s", (product_id,))
+
+    order = client.post("/order/create_orders", json={"title": name}, headers=auth_headers)
+    order_id = order.json()["id"]
+    client.post(f"/order/{order_id}/products/{product_id}", headers=auth_headers)
+    client.post(f"/order/{order_id}/checkout", headers=auth_headers)
+
+    balance_after_checkout = client.get("/client/me", headers=auth_headers).json()["balance"]
+    _db_execute("UPDATE products SET price=500 WHERE id=%s", (product_id,))
+
+    client.post(f"/order/{order_id}/refund", headers=auth_headers)
+
+    balance_after_refund = client.get("/client/me", headers=auth_headers).json()["balance"]
+    assert balance_after_refund == balance_after_checkout + 50
 
 
 def test_refund_already_cancelled(client, auth_headers):

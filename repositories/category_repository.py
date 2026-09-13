@@ -1,7 +1,8 @@
-from schemas.category.input_dto import CategoryCreateDTO
-from models.models import Category
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.models import Category
+from schemas.category.input_dto import CategoryCreateDTO
 
 
 class CategoryRepository:

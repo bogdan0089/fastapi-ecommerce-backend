@@ -1,4 +1,3 @@
-import pytest
 from tests.conftest import _db_execute
 
 
@@ -94,4 +93,24 @@ def test_delete_review(client, auth_headers):
 
 def test_delete_review_not_found(client):
     response = client.delete("/review/999999")
+    assert response.status_code == 404
+
+
+def test_second_review_of_the_same_product_is_rejected(client, auth_headers):
+    product_id = _create_product(client, auth_headers)
+    payload = {"rating": 5, "comment": "Перший", "product_id": product_id}
+    assert client.post("/review/", json=payload, headers=auth_headers).status_code == 200
+
+    second = client.post("/review/", json={**payload, "comment": "Другий"}, headers=auth_headers)
+    assert second.status_code == 409
+
+    listed = client.get(f"/review/product/{product_id}").json()
+    assert len(listed) == 1
+
+
+def test_review_for_a_missing_product_is_404(client, auth_headers):
+    response = client.post("/review/", json={
+        "rating": 5,
+        "product_id": 999999,
+    }, headers=auth_headers)
     assert response.status_code == 404

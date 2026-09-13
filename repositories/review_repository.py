@@ -1,7 +1,8 @@
-from schemas.review.input_dto import ReviewCreate
-from sqlalchemy.ext.asyncio import AsyncSession
-from models.models import Review
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.models import Review
+from schemas.review.input_dto import ReviewCreate
 
 
 class ReviewRepository:

@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr
+
 from core.enum import Role
+from core.validators import Password
 
 
 class RefreshRequestDTO(BaseModel):
@@ -8,7 +10,7 @@ class RefreshRequestDTO(BaseModel):
 
 class ChangePasswordDTO(BaseModel):
     old_password: str
-    new_password: str
+    new_password: Password
 
 
 class ChangeRoleDTO(BaseModel):
@@ -17,7 +19,7 @@ class ChangeRoleDTO(BaseModel):
 
 class ResetPasswordDTO(BaseModel):
     reset_token: str
-    new_password: str
+    new_password: Password
 
 
 class ForgotPasswordDTO(BaseModel):

@@ -1,5 +1,6 @@
+
 from pydantic import BaseModel, ConfigDict, EmailStr
-from typing import Optional
+
 from core.enum import Role
 
 
@@ -12,7 +13,7 @@ class ClientOutputDTO(BaseModel):
     age: int
     balance: float
     role: Role
-    address: Optional[str] = None
+    address: str | None = None
 
 
 class ClientOrdersCountDTO(BaseModel):

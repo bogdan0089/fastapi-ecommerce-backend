@@ -1,7 +1,9 @@
-from typing import Sequence
+from collections.abc import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from core.enum import OrderStatus
 from models.models import Order, OrderProduct
 from schemas.order.input_dto import OrderCreateInternalDTO, OrderUpdateDTO
