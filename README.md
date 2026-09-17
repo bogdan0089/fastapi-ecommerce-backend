@@ -280,12 +280,25 @@ Swagger UI: `http://localhost:8000/docs`
 pytest tests/ -v
 ```
 
-**4. Stripe webhook (local testing)**
+**4. Fill the store with a demo catalogue**
+```bash
+python -m scripts.seed_catalogue --products 2000
+# inside Docker:
+docker compose exec backend_system_app python -m scripts.seed_catalogue --products 2000
+```
+
+Ten categories, products generated from per-category templates with a fixed seed, so
+the same arguments always produce the same catalogue. Inserted in round-robin category
+order, because the AI endpoints read the first hundred products by id and that hundred
+should span every category. The script refuses a store that already has products unless
+`--append` is passed.
+
+**5. Stripe webhook (local testing)**
 ```bash
 stripe listen --forward-to localhost:8000/payment/webhook
 ```
 
-**5. Migrations (manual)**
+**6. Migrations (manual)**
 ```bash
 alembic upgrade head
 alembic revision --autogenerate -m "description"
