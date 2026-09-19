@@ -21,5 +21,5 @@ async def get_review(review_id: int) -> ReviewResponse:
     return await ReviewService.get_review(review_id)
 
 @router_review.delete("/{review_id}", status_code=204)
-async def review_delete(review_id: int) -> None:
-    await ReviewService.delete_review(review_id)
+async def review_delete(review_id: int, current_client: CurrentClient) -> None:
+    await ReviewService.delete_review(review_id, current_client)
