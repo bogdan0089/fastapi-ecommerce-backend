@@ -11,9 +11,13 @@
 
 Production-ready async REST API for a full-featured e-commerce platform. Built with FastAPI and PostgreSQL, it covers the complete shopping flow — from browsing and cart management to checkout, payments, and order tracking — with JWT auth, RBAC, Redis caching, Celery async tasks, Stripe payments, real-time WebSocket notifications, and AI-powered features via Groq or Google Gemini, chosen by a setting.
 
-**Live demo:** https://bohdan-shop.duckdns.org  
-**Swagger UI:** https://bohdan-shop.duckdns.org/docs  
+**▶ Live store:** https://shop.bondanweb.duckdns.org — Stripe test card `4242 4242 4242 4242`
+**▶ Live API docs:** https://shop-api.bondanweb.duckdns.org/docs
 **Frontend repo:** https://github.com/bogdan0089/ecommerce-frontend
+
+| Storefront | API |
+|---|---|
+| ![Storefront](docs/screenshots/storefront.png) | ![Swagger UI](docs/screenshots/api-docs.png) |
 
 ---
 
@@ -24,7 +28,7 @@ Production-ready async REST API for a full-featured e-commerce platform. Built w
 | Python 3.11 + FastAPI | Async web framework |
 | PostgreSQL 15 + SQLAlchemy 2.0 | Async ORM + database |
 | Alembic | Database migrations |
-| Redis 7 | Caching + Celery result backend |
+| Redis 7 | Caching, rate limits, email-verification tokens |
 | RabbitMQ | Celery message broker |
 | Celery | Background email tasks |
 | PyJWT + bcrypt / passlib | Authentication + password hashing |
@@ -32,7 +36,7 @@ Production-ready async REST API for a full-featured e-commerce platform. Built w
 | WebSocket | Real-time admin notifications |
 | Groq or Google Gemini | AI search, recommendations, chat, product descriptions; `LLM_PROVIDER` picks one |
 | Docker + Docker Compose | Containerization |
-| GitHub Actions | CI/CD — automated testing and deployment to AWS EC2 |
+| GitHub Actions | CI/CD — tests on every push, deploy to AWS EC2 on merge to `main` |
 
 ---
 
@@ -43,12 +47,13 @@ fastapi-ecommerce-backend/
 ├── app/              # Routers — HTTP endpoints only, no business logic
 ├── services/         # Business logic — all @staticmethod methods
 ├── repositories/     # Raw SQLAlchemy queries only
-├── models/           # ORM models: Client, Order, Product, Transaction, Category, OrderProduct
+├── models/           # ORM models: Client, Order, OrderProduct, Product, Category, Review, Transaction, ProcessedStripeEvent
 ├── schemas/          # Pydantic v2 — request validation and response serialization
 ├── core/             # Config, 30+ custom exceptions, enums (Role, OrderStatus, etc.), shared field validators
 ├── database/         # Async session, Unit of Work pattern
 ├── utils/            # JWT dependencies, WebSocket connection manager, structured logger
 ├── alembic/          # Database migrations
+├── scripts/          # seed_catalogue.py — fills an empty store with a demo catalogue
 ├── tests/            # pytest integration tests
 ├── celery_app.py     # Celery tasks (email sending)
 ├── Dockerfile
@@ -67,7 +72,7 @@ Router → Service → UnitOfWork → Repository → DB
 - **Service** — all business logic, `@staticmethod` methods, always uses `UnitOfWork`
 - **UnitOfWork** — async context manager, opens session, auto-commits on success, auto-rollbacks on exception
 - **Repository** — raw SQLAlchemy queries, no logic
-- **Models** — 6 ORM models with One-to-Many and Many-to-Many relationships
+- **Models** — 8 ORM models with One-to-Many and Many-to-Many relationships
 
 ---
 
@@ -77,19 +82,26 @@ Router → Service → UnitOfWork → Repository → DB
 - **RBAC** — 3 roles (`client` / `moderator` / `superadmin`) with role-based endpoint protection
 - **Product Moderation** — `pending → accept / rejected` workflow, reviewed by moderator or superadmin
 - **Soft Delete** — clients soft-deleted via `is_active` flag; data preserved, hidden from all queries
-- **Caching** — Redis with 60s TTL on list/stats endpoints, wildcard invalidation on every write
+- **Caching** — Redis with 60s TTL on list/stats endpoints; every write bumps a per-resource version, so stale keys become unreachable without scanning Redis
 - **Pagination** — all list endpoints support `limit` and `offset`
 - **Order Flow** — checkout validates stock, deducts balance, creates `purchase` transaction; refund restores balance and creates `refund` transaction
-- **Stripe Payments** — PaymentIntent flow; client creates intent, Stripe confirms via webhook, balance topped up automatically
-- **WebSocket** — persistent admin connection, broadcasts checkout notifications to all connected admins in real time
+- **Stripe Payments** — PaymentIntent flow; the balance is credited only by the signature-verified webhook, and exactly once: each Stripe event id is claimed with `INSERT … ON CONFLICT DO NOTHING`, so a redelivered event — even two arriving at the same moment — is ignored
+- **System**
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| GET | /health | 🔓 | Liveness plus database and Redis checks |
+
+**WebSocket** — persistent admin connection, broadcasts checkout notifications to all connected admins in real time
 - **Async Tasks** — Celery + RabbitMQ for background email sending (verification, password reset, order status change)
 - **Product Quantity** — checkout validates available stock, returns HTTP 400 if insufficient
 - **Pessimistic Locking** — `SELECT ... FOR UPDATE` on all balance-changing operations to prevent race conditions
-- **Order State Machine** — enforced transitions (`pending → completed / cancelled`, `completed → cancelled` only)
-- **Rate Limiting** — Redis-based per-IP counter on login and forgot-password endpoints; max 5 requests / 60s, returns HTTP 429
+- **Order State Machine** — enforced transitions (`create → completed / cancelled`, `completed → cancelled` only)
+- **Rate Limiting** — Redis-based per-IP counter on registration, login, resend-verification, forgot-password, payment and AI endpoints; max 5 requests / 60s, returns HTTP 429
 - **AI Integration** — Groq (default) or Google Gemini, swapped with one setting, powers 4 features: semantic product search that returns the matching products themselves, personalized recommendations from purchase history, a store assistant chatbot, and AI-generated product descriptions for admins
+- **Reviews** — one per client per product (unique constraint); only the author or a moderator may delete one
+- **Demo catalogue** — `scripts/seed_catalogue.py` generates 2,000 products across ten categories
 - **Structured Logging** — `utils/logger.py` with `get_logger` utility outputs timestamped logs to stdout; all services log key business events at `INFO` level, not-found cases at `WARNING`; plain reads are intentionally skipped to keep logs clean
-- **CI/CD** — GitHub Actions runs ruff, migration checks and 104 integration tests on every push and PR; on merge to `main` automatically deploys to AWS EC2 via SSH
+- **CI/CD** — GitHub Actions runs ruff, migration checks and 199 integration tests on every push and PR; on merge to `main` automatically deploys to AWS EC2 via SSH
 
 ---
 
@@ -103,14 +115,15 @@ GitHub Actions — CI
   • runs ruff
   • runs alembic migrations, then alembic check
   • downgrades to base and upgrades again
-  • runs pytest (104 tests)
+  • runs pytest (199 tests)
         ↓
 merge to main
         ↓
 deploy job in the same workflow, gated on lint + test
-  • connects to AWS EC2 via SSH
-  • git pull origin main
-  • docker compose up --build -d
+  • connects to AWS EC2 via SSH with a deploy key of its own
+  • git pull --ff-only origin main
+  • docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+    (the production overlay keeps Postgres, Redis and RabbitMQ off public ports)
 ```
 
 ---
@@ -125,6 +138,8 @@ deploy job in the same workflow, gated on lint + test
 | `OrderProduct` | M2M — order ↔ products with quantity |
 | `Transaction` | Financial record (deposit / withdraw / purchase / refund) |
 | `Category` | Product category |
+| `Review` | Rating and comment, one per client per product |
+| `ProcessedStripeEvent` | Stripe event ids already credited — makes the webhook idempotent |
 
 ---
 
@@ -196,6 +211,7 @@ superadmin and leave Stripe as the only way in.
 |--------|-----|------|-------------|
 | POST | /product/ | 🔒 | Create product (status: pending) |
 | GET | /product/all | 🔓 | List accepted products |
+| GET | /product/catalogue?name=&category_id=&min_price=&max_price= | 🔓 | Storefront catalogue — filters combined, paginated, with totals |
 | GET | /product/admin/all | 🔑 | List all products (any status) |
 | GET | /product/search?name= | 🔓 | Search by name |
 | GET | /product/filter?min_price=&max_price= | 🔓 | Filter by price range |
@@ -238,13 +254,22 @@ superadmin and leave Stripe as the only way in.
 | Method | URL | Auth | Description |
 |--------|-----|------|-------------|
 | POST | /category/create | 🔑 | Create category |
-| GET | /category/admin | 🔓 | List all categories |
+| GET | /category/all | 🔓 | List all categories |
+| DELETE | /category/{id} | 🔑 | Delete category |
+
+**Review**
+| Method | URL | Auth | Description |
+|--------|-----|------|-------------|
+| POST | /review | 🔒 | Review a product — one per client per product |
+| GET | /review/{id} | 🔓 | Get review by ID |
+| GET | /review/product/{product_id} | 🔓 | Reviews of a product |
+| DELETE | /review/{id} | 🔒 | Delete — the author or a moderator only |
 
 **AI**
 | Method | URL | Auth | Description |
 |--------|-----|------|-------------|
 | GET | /ai/recommendations | 🔒 | Personalized recommendations based on purchase history |
-| GET | /ai/search?q= | 🔒 | Semantic AI search across product catalog |
+| GET | /ai/search?query= | 🔒 | Semantic AI search across product catalog |
 | POST | /ai/chat | 🔒 | Store assistant chatbot |
 | POST | /ai/generate-description | 🔑 | AI-generated product description for admin |
 
@@ -311,7 +336,21 @@ alembic revision --autogenerate -m "description"
 | Service | Image | Role |
 |---------|-------|------|
 | `db` | postgres:15 | Primary database |
-| `redis` | redis:7 | Cache + Celery result backend |
+| `redis` | redis:7 | Cache, rate limits, verification tokens |
 | `rabbitmq` | rabbitmq:3 | Celery message broker |
 | `backend_system_app` | Dockerfile | Runs migrations then uvicorn on :8000 |
 | `celery_worker` | Dockerfile | Runs Celery worker for email tasks |
+
+---
+
+## Deployment
+
+The live instance runs on AWS EC2 behind Caddy, which terminates HTTPS. Production
+uses an overlay that keeps the database, cache and broker off public ports and binds
+the API to loopback:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+```
+
+Deploys are automatic on merge to `main` — see [CI/CD Pipeline](#cicd-pipeline).
