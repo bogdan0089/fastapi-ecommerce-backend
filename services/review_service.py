@@ -1,7 +1,9 @@
 from pydantic import TypeAdapter
 from sqlalchemy.exc import IntegrityError
 
+from core.enum import Role
 from core.exceptions import (
+    InsufficientPermissionsError,
     ProductNotFound,
     ReviewAlreadyExistsError,
     ReviewNotFoundError,
@@ -9,10 +11,14 @@ from core.exceptions import (
 )
 from core.redis import redis_client
 from database.unit_of_work import UnitOfWork
+from models.models import Client
 from schemas.review.input_dto import ReviewCreate
 from schemas.review.output_dto import ReviewResponse
 from utils import cache
 from utils.logger import get_logger
+
+# Who may remove someone else's review.
+MODERATORS = (Role.moderator, Role.superadmin)
 
 logger = get_logger(__name__)
 
@@ -82,11 +88,16 @@ class ReviewService:
         return validate
 
     @staticmethod
-    async def delete_review(review_id: int) -> None:
+    async def delete_review(review_id: int, current_client: Client) -> None:
         async with UnitOfWork() as uow:
             review = await uow.review.get_review(review_id)
             if not review:
                 raise ReviewNotFoundError(review_id)
+            if review.client_id != current_client.id and current_client.role not in MODERATORS:
+                raise InsufficientPermissionsError(
+                    required_role="Owner or Moderator",
+                    client_role=current_client.role.value,
+                )
             await uow.review.delete_review(review)
         await cache.invalidate("review")
         logger.info("review_deleted", extra={"extra_fields": {"review_id": review_id}})

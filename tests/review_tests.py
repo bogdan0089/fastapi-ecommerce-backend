@@ -1,3 +1,5 @@
+import uuid
+
 from tests.conftest import _db_execute
 
 
@@ -78,22 +80,57 @@ def test_get_reviews_by_product_not_found(client):
     assert response.status_code == 404
 
 
-def test_delete_review(client, auth_headers):
+def _login_as_new_client(client, role: str | None = None) -> dict:
+    """Register, verify and sign in another client, optionally with a role."""
+    email = f"user_{uuid.uuid4().hex[:8]}@gmail.com"
+    client.post("/auth/register", json={"name": "Other", "email": email, "password": "pass1234", "age": 30})
+    _db_execute("UPDATE clients SET is_verified=true WHERE email=%s", (email,))
+    if role:
+        _db_execute("UPDATE clients SET role=%s WHERE email=%s", (role, email))
+    token = client.post("/auth/client_login", data={"username": email, "password": "pass1234"}).json()
+    return {"Authorization": f"Bearer {token['access_token']}"}
+
+
+def _create_review(client, auth_headers) -> int:
     product_id = _create_product(client, auth_headers)
-    created = client.post("/review/", json={
-        "rating": 2,
-        "product_id": product_id
-    }, headers=auth_headers)
-    review_id = created.json()["id"]
-    response = client.delete(f"/review/{review_id}")
+    created = client.post("/review/", json={"rating": 2, "product_id": product_id}, headers=auth_headers)
+    return created.json()["id"]
+
+
+def test_delete_review(client, auth_headers):
+    review_id = _create_review(client, auth_headers)
+
+    response = client.delete(f"/review/{review_id}", headers=auth_headers)
+
     assert response.status_code == 204
-    get_response = client.get(f"/review/{review_id}")
-    assert get_response.status_code == 404
+    assert client.get(f"/review/{review_id}").status_code == 404
 
 
-def test_delete_review_not_found(client):
-    response = client.delete("/review/999999")
+def test_delete_review_not_found(client, auth_headers):
+    response = client.delete("/review/999999", headers=auth_headers)
     assert response.status_code == 404
+
+
+def test_an_anonymous_visitor_cannot_delete_a_review(client, auth_headers):
+    review_id = _create_review(client, auth_headers)
+
+    assert client.delete(f"/review/{review_id}").status_code == 401
+    assert client.get(f"/review/{review_id}").status_code == 200
+
+
+def test_another_client_cannot_delete_a_review(client, auth_headers):
+    review_id = _create_review(client, auth_headers)
+    other = _login_as_new_client(client)
+
+    assert client.delete(f"/review/{review_id}", headers=other).status_code == 403
+    assert client.get(f"/review/{review_id}").status_code == 200
+
+
+def test_a_moderator_can_delete_any_review(client, auth_headers):
+    review_id = _create_review(client, auth_headers)
+    moderator = _login_as_new_client(client, role="moderator")
+
+    assert client.delete(f"/review/{review_id}", headers=moderator).status_code == 204
 
 
 def test_second_review_of_the_same_product_is_rejected(client, auth_headers):
